@@ -363,49 +363,63 @@ function openModalForEdit(id, rows){
 
 async function getFormPayload(){
   const hours = Number(el("fHours").value);
-  if (!hours || hours<=0){
-    el("modalStatus").textContent="Vul geldige uren in.";
+
+  if (!hours || hours <= 0){
+    el("modalStatus").textContent = "Vul geldige uren in.";
     return null;
   }
 
-  const { data: wd } = await sb
+  // Werkdag ophalen
+  const { data: wd, error: wdErr } = await sb
     .from("workdays")
     .select("id,total_hours")
-    .eq("user_id",session.user.id)
-    .eq("work_date",selectedDate)
+    .eq("user_id", session.user.id)
+    .eq("work_date", selectedDate)
     .maybeSingle();
 
-  if (!wd){
-    el("modalStatus").textContent="Sla eerst de werkdag op.";
+  if (wdErr){
+    el("modalStatus").textContent = wdErr.message;
     return null;
   }
 
-  const { data: entries } = await sb
+  if (!wd){
+    el("modalStatus").textContent = "Sla eerst de werkdag op.";
+    return null;
+  }
+
+  // Bestaande uren van deze dag ophalen
+  const { data: entries, error: entErr } = await sb
     .from("time_entries")
     .select("id,hours")
-    .eq("workday_id",wd.id);
+    .eq("workday_id", wd.id);
 
-let used = (dayEntries || []).reduce(
-  (t, e) => t + Number(e.hours || 0),
-  0
-);
+  if (entErr){
+    el("modalStatus").textContent = entErr.message;
+    return null;
+  }
 
-if (editingId){
-  const cur = dayEntries.find(e => e.id === editingId);
-  if (cur) used -= Number(cur.hours || 0);
-}
+  let used = (entries || []).reduce(
+    (t, e) => t + Number(e.hours || 0),
+    0
+  );
 
-const newTotal = used + hours;
+  // Bij edit: huidige entry aftrekken
+  if (editingId){
+    const cur = entries.find(e => e.id === editingId);
+    if (cur) used -= Number(cur.hours || 0);
+  }
 
-if (newTotal > wd.total_hours + 0.01){
-  el("modalStatus").textContent =
-    `Let op: ${(newTotal - wd.total_hours).toFixed(2)}u meer gespecificeerd dan gewerkt`;
-} else {
-  el("modalStatus").textContent = "";
-}
+  const newTotal = used + hours;
 
+  // ⚠️ Alleen WAARSCHUWEN, NIET BLOKKEREN
+  if (newTotal > wd.total_hours + 0.01){
+    el("modalStatus").textContent =
+      `Let op: ${(newTotal - wd.total_hours).toFixed(2)}u meer gespecificeerd dan gewerkt`;
+  } else {
+    el("modalStatus").textContent = "";
+  }
 
-    return {
+  return {
     entry_date: selectedDate,
     workday_id: wd.id,
     hours,
@@ -414,9 +428,9 @@ if (newTotal > wd.total_hours + 0.01){
     activity_id: el("fActivity").value,
     description: el("fDesc").value || "",
     billable: el("fBillable").value === "true"
-    };
-
+  };
 }
+
 
 /* ======================
    LOOKUPS
