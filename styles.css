@@ -183,3 +183,31 @@ button.small{
   .table{border:1px solid #ddd}
   .table th{background:#f3f3f3; color:#333}
 }
+.week-days{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.week-day{
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: #12131a;
+  border: 1px solid #2a2d3a;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 600;
+  color: #cfd2ff;
+}
+
+.week-day small{
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.week-day.active{
+  background: #5fe18b;
+  color: #04120a;
+  border-color: #5fe18b;
+}
