@@ -391,11 +391,11 @@ async function getFormPayload(){
     if (cur) used -= Number(cur.hours||0);
   }
 
-  if (used + hours > wd.total_hours + 0.01){
-    el("modalStatus").textContent =
-      `Te veel uren (${(used+hours).toFixed(2)}) – dagtotaal is ${wd.total_hours.toFixed(2)}`;
-    return null;
-  }
+if (newTotal > wd.total_hours + 0.01){
+  el("modalStatus").textContent =
+    `Let op: ${ (newTotal - wd.total_hours).toFixed(2) }u meer gespecificeerd dan gewerkt`;
+}
+
 
   return {
     entry_date: selectedDate,
