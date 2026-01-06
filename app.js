@@ -265,7 +265,12 @@ function wireModal(){
 
     const { error } = await q;
     if (error) el("modalStatus").textContent = error.message;
-    else{ closeModal(); loadWeek(); }
+    else{
+  closeModal();
+  await loadWeek();                  // ⬅️ DIT WAS NODIG
+  await loadWorkdayForSelectedDate(); // ⬅️ status bijwerken
+}
+
   };
 
   el("btnDelete").onclick = async ()=>{
