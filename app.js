@@ -385,11 +385,17 @@ async function getFormPayload(){
     .select("id,hours")
     .eq("workday_id",wd.id);
 
-  let used = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
-  if (editingId){
-    const cur = entries.find(e=>e.id===editingId);
-    if (cur) used -= Number(cur.hours||0);
-  }
+let used = (dayEntries || []).reduce(
+  (t, e) => t + Number(e.hours || 0),
+  0
+);
+
+if (editingId){
+  const cur = dayEntries.find(e => e.id === editingId);
+  if (cur) used -= Number(cur.hours || 0);
+}
+
+const newTotal = used + hours;
 
 if (newTotal > wd.total_hours + 0.01){
   el("modalStatus").textContent =
