@@ -393,20 +393,23 @@ async function getFormPayload(){
 
 if (newTotal > wd.total_hours + 0.01){
   el("modalStatus").textContent =
-    `Let op: ${ (newTotal - wd.total_hours).toFixed(2) }u meer gespecificeerd dan gewerkt`;
+    `Let op: ${(newTotal - wd.total_hours).toFixed(2)}u meer gespecificeerd dan gewerkt`;
+} else {
+  el("modalStatus").textContent = "";
 }
 
 
-  return {
+    return {
     entry_date: selectedDate,
     workday_id: wd.id,
     hours,
     client_id: el("fClient").value,
     project_id: el("fProject").value,
     activity_id: el("fActivity").value,
-    description: el("fDesc").value||"",
-    billable: el("fBillable").value==="true"
-  };
+    description: el("fDesc").value || "",
+    billable: el("fBillable").value === "true"
+    };
+
 }
 
 /* ======================
