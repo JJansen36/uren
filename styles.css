@@ -211,3 +211,27 @@ button.small{
   color: #04120a;
   border-color: #5fe18b;
 }
+#blocks{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.blockRow{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.blockRow label{
+  font-size: 12px;
+  opacity: .8;
+  display:block;
+  margin-bottom: 6px;
+}
+
+.blockRow .remove{
+  height: 40px;
+  padding: 0 12px;
+}
