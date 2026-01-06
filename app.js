@@ -1,76 +1,34 @@
+// app.js — FIXED & STABLE VERSION
+
 import { makeSupabaseClient, requireSession, getMyProfile } from "./auth.js";
 import {
   startOfISOWeek, addDays, toISODate, parseISODate,
   getQueryParam, setQueryParam, formatNLDate, formatHours, sum, escapeHtml
 } from "./utils.js";
 
+/* ======================
+   STATE
+====================== */
 const sb = makeSupabaseClient();
-
 const el = (id)=>document.getElementById(id);
 const tbody = el("tbody");
 
 let session = null;
 let profile = null;
 
-let weekStart = null; // Date
+let weekStart = null;
+let selectedDate = null;
+
 let clients = [];
 let projects = [];
 let activities = [];
 
 let editingId = null;
 
+/* ======================
+   INIT
+====================== */
 document.addEventListener("DOMContentLoaded", init);
-
-function calcDayHours(start, end, pauseMin){
-  if (!start || !end) return 0;
-
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-
-  const startMin = sh * 60 + sm;
-  const endMin   = eh * 60 + em;
-
-  const worked = endMin - startMin - Number(pauseMin || 0);
-  return Math.max(0, worked / 60);
-}
-
-
-async function saveWorkday(){
-  el("dayStatus").textContent = "";
-
-  const start = el("dStart").value;
-  const end   = el("dEnd").value;
-  const pause = Number(el("dPause").value || 0);
-
-  if (!start || !end){
-    el("dayStatus").textContent = "Vul aanvang en gereed in.";
-    return;
-  }
-
-  const total = calcDayHours(start, end, pause);
-
-  const payload = {
-    user_id: session.user.id,
-    work_date: toISODate(weekStart), // of geselecteerde dag (zie noot)
-    start_time: start,
-    end_time: end,
-    break_minutes: pause,
-    total_hours: total
-  };
-
-  // upsert: bestaat dag → update, anders insert
-  const { error } = await sb
-    .from("workdays")
-    .upsert(payload, { onConflict: "user_id,work_date" });
-
-  if (error){
-    el("dayStatus").textContent = error.message;
-    return;
-  }
-
-  el("dayStatus").textContent = "Werkdag opgeslagen.";
-}
-
 
 async function init(){
   session = await requireSession(sb);
@@ -80,300 +38,319 @@ async function init(){
   el("meBadge").textContent = `${profile.name || 'Gebruiker'} • ${profile.role}`;
   if (profile.role === "admin") el("adminLink").style.display = "inline-flex";
 
-  el("btnLogout").onclick = async ()=>{ await sb.auth.signOut(); location.href="index.html"; };
+  el("btnLogout").onclick = async ()=>{
+    await sb.auth.signOut();
+    location.href = "index.html";
+  };
 
-  // week bepalen via url (weekStart=YYYY-MM-DD), anders huidige week
   const qs = getQueryParam("weekStart");
   weekStart = qs ? startOfISOWeek(parseISODate(qs)) : startOfISOWeek(new Date());
   setQueryParam("weekStart", toISODate(weekStart));
 
+  selectedDate = toISODate(new Date());
+
+  el("btnSaveDay").onclick = saveWorkday;
+
   wireWeekNav();
   wireModal();
 
+  ["dStart","dEnd","dPause"].forEach(id=>{
+    el(id).addEventListener("input", recalcDayTotal);
+  });
+
   await loadReferenceData();
   await loadWeek();
+  await loadWorkdayForSelectedDate();
 }
 
+/* ======================
+   HELPERS
+====================== */
+function calcDayHours(start, end, pauseMin){
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return Math.max(0, ((eh*60+em) - (sh*60+sm) - Number(pauseMin||0)) / 60);
+}
+
+function recalcDayTotal(){
+  const h = calcDayHours(
+    el("dStart").value,
+    el("dEnd").value,
+    el("dPause").value
+  );
+  el("dTotal").value = h.toFixed(2).replace(".", ",");
+}
+
+/* ======================
+   WORKDAY
+====================== */
+async function loadWorkdayForSelectedDate(){
+  el("dayStatus").textContent = `Werkdag: ${formatNLDate(selectedDate)}`;
+
+  const { data, error } = await sb
+    .from("workdays")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .eq("work_date", selectedDate)
+    .maybeSingle();
+
+  if (error){
+    el("dayStatus").textContent = error.message;
+    return;
+  }
+
+  if (!data){
+    el("dStart").value = "";
+    el("dEnd").value = "";
+    el("dPause").value = 30;
+    el("dTotal").value = "";
+    return;
+  }
+
+  el("dStart").value = data.start_time;
+  el("dEnd").value = data.end_time;
+  el("dPause").value = data.break_minutes;
+  el("dTotal").value = data.total_hours.toFixed(2).replace(".", ",");
+}
+
+async function saveWorkday(){
+  el("dayStatus").textContent = "";
+
+  const start = el("dStart").value;
+  const end   = el("dEnd").value;
+  const pause = Number(el("dPause").value||0);
+
+  if (!start || !end){
+    el("dayStatus").textContent = "Vul aanvang en gereed in.";
+    return;
+  }
+
+  const total = calcDayHours(start, end, pause);
+
+  const { error } = await sb.from("workdays").upsert({
+    user_id: session.user.id,
+    work_date: selectedDate,
+    start_time: start,
+    end_time: end,
+    break_minutes: pause,
+    total_hours: total
+  }, { onConflict: "user_id,work_date" });
+
+  el("dayStatus").textContent = error ? error.message : "Werkdag opgeslagen.";
+}
+
+/* ======================
+   WEEK OVERVIEW
+====================== */
 function wireWeekNav(){
   el("prevWeek").onclick = ()=>{ weekStart = addDays(weekStart,-7); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
   el("nextWeek").onclick = ()=>{ weekStart = addDays(weekStart, 7); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
   el("thisWeek").onclick = ()=>{ weekStart = startOfISOWeek(new Date()); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
 
-  el("btnAdd").onclick = ()=> openModalForCreate();
-  el("btnExport").onclick = ()=> {
-    const ws = toISODate(weekStart);
-    location.href = `report.html?weekStart=${encodeURIComponent(ws)}`;
-  el("btnSaveDay").onclick = saveWorkday;
-  };
-}
-
-function wireModal(){
-  el("btnCancel").onclick = closeModal;
-  el("modal").addEventListener("click", (e)=>{ if(e.target.id==="modal") closeModal(); });
-
-  el("fClient").onchange = ()=> fillProjectsDropdown();
-
-  el("btnSave").onclick = async ()=> {
-    el("modalStatus").textContent = "";
-    try{
-      const payload = getFormPayload();
-      if (!payload) return;
-
-      if (editingId){
-        const { error } = await sb.from("time_entries").update(payload).eq("id", editingId);
-        if (error) throw error;
-      }else{
-        const { error } = await sb.from("time_entries").insert({ ...payload, user_id: session.user.id });
-        if (error) throw error;
-      }
-
-      closeModal();
-      await loadWeek();
-    }catch(e){
-      el("modalStatus").textContent = e.message || String(e);
-    }
-  };
-
-  el("btnDelete").onclick = async ()=>{
-    el("modalStatus").textContent = "";
-    try{
-      if (!editingId) return;
-      const { error } = await sb.from("time_entries").delete().eq("id", editingId);
-      if (error) throw error;
-      closeModal();
-      await loadWeek();
-    }catch(e){
-      el("modalStatus").textContent = e.message || String(e);
-    }
-  };
-}
-
-["dStart","dEnd","dPause"].forEach(id=>{
-  el(id).addEventListener("input", ()=>{
-    const h = calcDayHours(
-      el("dStart").value,
-      el("dEnd").value,
-      el("dPause").value
-    );
-    el("dTotal").value = h.toFixed(2).replace('.',',');
-  });
-});
-
-
-async function loadReferenceData(){
-  const [cRes, pRes, aRes] = await Promise.all([
-    sb.from("clients").select("id,name,active").eq("active", true).order("name"),
-    sb.from("projects").select("id,name,client_id,active").eq("active", true).order("name"),
-    sb.from("activities").select("id,name,billable_default,active").eq("active", true).order("name"),
-  ]);
-
-  if (cRes.error) throw cRes.error;
-  if (pRes.error) throw pRes.error;
-  if (aRes.error) throw aRes.error;
-
-  clients = cRes.data || [];
-  projects = pRes.data || [];
-  activities = aRes.data || [];
-
-  fillClientsDropdown();
-  fillActivitiesDropdown();
-  fillProjectsDropdown();
-}
-
-function fillClientsDropdown(selectedId){
-  el("fClient").innerHTML = clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-  if (selectedId) el("fClient").value = selectedId;
-}
-
-
-
-function fillProjectsDropdown(selectedId){
-  const clientId = el("fClient").value || (clients[0]?.id);
-  const filtered = projects.filter(p=>p.client_id===clientId);
-  el("fProject").innerHTML = filtered.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
-  if (selectedId && filtered.some(p=>p.id===selectedId)) el("fProject").value = selectedId;
-}
-
-function fillActivitiesDropdown(selectedId){
-  el("fActivity").innerHTML = activities.map(a=>`<option value="${a.id}" data-billable="${a.billable_default}">${escapeHtml(a.name)}</option>`).join("");
-  if (selectedId) el("fActivity").value = selectedId;
-
-  // Als activiteit wisselt: zet default billable
-  el("fActivity").onchange = ()=>{
-    const opt = el("fActivity").selectedOptions[0];
-    const def = opt?.getAttribute("data-billable");
-    if (def === "false") el("fBillable").value = "false";
-    if (def === "true") el("fBillable").value = "true";
+  el("btnAdd").onclick = openModalForCreate;
+  el("btnExport").onclick = ()=>{
+    location.href = `report.html?weekStart=${encodeURIComponent(toISODate(weekStart))}`;
   };
 }
 
 async function loadWeek(){
-  // label
   const end = addDays(weekStart, 6);
-  el("weekLabel").textContent = `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
+  el("weekLabel").textContent =
+    `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
 
-  const d1 = toISODate(weekStart);
-  const d2 = toISODate(end);
-
-  el("hint").textContent = "Laden…";
-
-  // haal entries voor deze week
-  let q = sb
+  const { data, error } = await sb
     .from("time_entries")
     .select(`
       id, entry_date, hours, description, billable,
       client_id, project_id, activity_id,
       clients(name),
-      projects(name, client_id),
-      activities(name, billable_default)
+      projects(name),
+      activities(name)
     `)
-    .gte("entry_date", d1)
-    .lte("entry_date", d2)
-    .order("entry_date", { ascending: true });
+    .gte("entry_date", toISODate(weekStart))
+    .lte("entry_date", toISODate(end))
+    .order("entry_date");
 
-  // user ziet door RLS alleen eigen entries; admin ziet alles.
-  // Als admin: toon standaard alleen eigen? (kan later filter uitbreiden)
-  // Voor nu: admin ziet alles = handig.
-  const { data, error } = await q;
-  if (error) {
+  if (error){
     el("hint").textContent = error.message;
     return;
   }
 
-  renderTable(data || []);
-  renderKPIs(data || []);
+  renderTable(data||[]);
+  renderKPIs(data||[]);
+  el("hint").textContent = data?.length ? "" : "Nog geen uren deze week.";
+}
 
-  el("hint").textContent = data?.length ? "" : "Nog geen uren deze week. Klik op “Uur toevoegen”.";
+function renderTable(rows){
+  tbody.innerHTML = rows.map(r=>`
+    <tr>
+      <td>
+        <button class="link-day" data-day="${r.entry_date}">
+          ${formatNLDate(r.entry_date)}
+        </button>
+      </td>
+      <td>${escapeHtml(r.clients?.name||"-")}</td>
+      <td>${escapeHtml(r.projects?.name||"-")}</td>
+      <td>${escapeHtml(r.activities?.name||"-")}</td>
+      <td>${escapeHtml(r.description||"")}</td>
+      <td><b>${formatHours(r.hours)}</b></td>
+      <td>${r.billable?"Ja":"Nee"}</td>
+      <td><button class="small" data-edit="${r.id}">Bewerk</button></td>
+    </tr>
+  `).join("");
+
+  tbody.querySelectorAll("button.link-day").forEach(btn=>{
+    btn.onclick = async ()=>{
+      selectedDate = btn.dataset.day;
+      await loadWorkdayForSelectedDate();
+    };
+  });
+
+  tbody.querySelectorAll("button[data-edit]").forEach(btn=>{
+    btn.onclick = ()=> openModalForEdit(btn.dataset.edit, rows);
+  });
 }
 
 function renderKPIs(rows){
   const total = sum(rows, r=>Number(r.hours||0));
   const bill = sum(rows.filter(r=>r.billable), r=>Number(r.hours||0));
-  const non = total - bill;
-
   el("kpiTotal").textContent = formatHours(total);
   el("kpiBillable").textContent = formatHours(bill);
-  el("kpiNonBillable").textContent = formatHours(non);
+  el("kpiNonBillable").textContent = formatHours(total-bill);
 }
 
-function renderTable(rows){
-  tbody.innerHTML = rows.map(r=>{
-    const clientName = r.clients?.name || "-";
-    const projectName = r.projects?.name || "-";
-    const activityName = r.activities?.name || "-";
-    const desc = escapeHtml(r.description || "");
-    const bill = r.billable ? "Ja" : "Nee";
+/* ======================
+   MODAL / TIME ENTRIES
+====================== */
+function wireModal(){
+  el("btnCancel").onclick = closeModal;
+  el("modal").onclick = e=>{ if(e.target.id==="modal") closeModal(); };
+  el("fClient").onchange = ()=> fillProjectsDropdown();
 
-    return `
-      <tr>
-        <td>${formatNLDate(r.entry_date)}</td>
-        <td>${escapeHtml(clientName)}</td>
-        <td>${escapeHtml(projectName)}</td>
-        <td>${escapeHtml(activityName)}</td>
-        <td>${desc}</td>
-        <td><b>${formatHours(r.hours)}</b></td>
-        <td>${bill}</td>
-        <td>
-          <button class="small" data-edit="${r.id}">Bewerk</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
+  el("btnSave").onclick = async ()=>{
+    el("modalStatus").textContent="";
+    const payload = await getFormPayload();
+    if (!payload) return;
 
-  tbody.querySelectorAll("button[data-edit]").forEach(btn=>{
-    btn.onclick = ()=> openModalForEdit(btn.getAttribute("data-edit"), rows);
-  });
+    const q = editingId
+      ? sb.from("time_entries").update(payload).eq("id", editingId)
+      : sb.from("time_entries").insert({ ...payload, user_id: session.user.id });
+
+    const { error } = await q;
+    if (error) el("modalStatus").textContent = error.message;
+    else{ closeModal(); loadWeek(); }
+  };
+
+  el("btnDelete").onclick = async ()=>{
+    if (!editingId) return;
+    await sb.from("time_entries").delete().eq("id", editingId);
+    closeModal();
+    loadWeek();
+  };
 }
 
 function openModalForCreate(){
   editingId = null;
   el("modalTitle").textContent = "Uur toevoegen";
   el("btnDelete").style.display = "none";
-  el("modalStatus").textContent = "";
-
-  // defaults
-  el("fDate").value = toISODate(new Date());
-  el("fHours").value = "8";
+  el("fDate").value = selectedDate;
+  el("fDate").disabled = true;
+  el("fHours").value = "1";
   fillClientsDropdown(clients[0]?.id);
   fillProjectsDropdown();
   fillActivitiesDropdown(activities[0]?.id);
-
-  // set billable default from activity
-  const opt = el("fActivity").selectedOptions[0];
-  const def = opt?.getAttribute("data-billable");
-  el("fBillable").value = (def === "false") ? "false" : "true";
-
-  el("fDesc").value = "";
-
+  el("fDesc").value="";
   openModal();
 }
 
 function openModalForEdit(id, rows){
   const r = rows.find(x=>x.id===id);
   if (!r) return;
-
   editingId = id;
   el("modalTitle").textContent = "Uur bewerken";
   el("btnDelete").style.display = "inline-block";
-  el("modalStatus").textContent = "";
-
   el("fDate").value = r.entry_date;
-  el("fHours").value = String(r.hours ?? "");
+  el("fHours").value = r.hours;
   fillClientsDropdown(r.client_id);
   fillProjectsDropdown(r.project_id);
   fillActivitiesDropdown(r.activity_id);
-  el("fBillable").value = r.billable ? "true" : "false";
-  el("fDesc").value = r.description || "";
-
+  el("fBillable").value = r.billable?"true":"false";
+  el("fDesc").value = r.description||"";
   openModal();
 }
 
-function getFormPayload(){
-  const entry_date = el("fDate").value;
+async function getFormPayload(){
   const hours = Number(el("fHours").value);
-  const client_id = el("fClient").value;
-  const project_id = el("fProject").value;
-  const activity_id = el("fActivity").value;
-  const description = el("fDesc").value || "";
-  const billable = el("fBillable").value === "true";
-  // CONTROLE: specificatie == dagtotaal
-const { data: wd } = await sb
-  .from("workdays")
-  .select("id,total_hours")
-  .eq("user_id", session.user.id)
-  .eq("work_date", entry_date)
-  .single();
+  if (!hours || hours<=0){ el("modalStatus").textContent="Vul geldige uren in."; return null; }
 
-if (!wd){
-  el("modalStatus").textContent = "Sla eerst de werkdag (begin/eind/pauze) op.";
-  return null;
+  const { data: wd } = await sb
+    .from("workdays")
+    .select("id,total_hours")
+    .eq("user_id", session.user.id)
+    .eq("work_date", selectedDate)
+    .maybeSingle();
+
+  if (!wd){ el("modalStatus").textContent="Sla eerst de werkdag op."; return null; }
+
+  const { data: dayEntries } = await sb
+    .from("time_entries")
+    .select("id,hours")
+    .eq("workday_id", wd.id);
+
+  let used = (dayEntries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
+  if (editingId){
+    const cur = dayEntries.find(e=>e.id===editingId);
+    if (cur) used -= Number(cur.hours||0);
+  }
+
+  if (Math.abs((used+hours)-wd.total_hours)>0.01){
+    el("modalStatus").textContent="Specificatie ≠ dagtotaal";
+    return null;
+  }
+
+  return {
+    entry_date: selectedDate,
+    workday_id: wd.id,
+    hours,
+    client_id: el("fClient").value,
+    project_id: el("fProject").value,
+    activity_id: el("fActivity").value,
+    description: el("fDesc").value||"",
+    billable: el("fBillable").value==="true"
+  };
 }
 
-const { data: dayEntries } = await sb
-  .from("time_entries")
-  .select("hours")
-  .eq("workday_id", wd.id);
-
-const used = dayEntries.reduce((t,e)=>t+Number(e.hours||0),0);
-const diff = Math.abs((used + hours) - wd.total_hours);
-
-if (diff > 0.01){
-  el("modalStatus").textContent =
-    `Uren (${(used+hours).toFixed(2)}) ≠ dagtotaal (${wd.total_hours.toFixed(2)})`;
-  return null;
+/* ======================
+   LOOKUPS
+====================== */
+async function loadReferenceData(){
+  const [c,p,a] = await Promise.all([
+    sb.from("clients").select("*").eq("active",true),
+    sb.from("projects").select("*").eq("active",true),
+    sb.from("activities").select("*").eq("active",true)
+  ]);
+  clients=c.data||[]; projects=p.data||[]; activities=a.data||[];
+  fillClientsDropdown(); fillProjectsDropdown(); fillActivitiesDropdown();
 }
 
-
-  if (!entry_date) { el("modalStatus").textContent = "Kies een datum."; return null; }
-  if (!hours || hours <= 0) { el("modalStatus").textContent = "Vul geldige uren in."; return null; }
-  if (!client_id || !project_id || !activity_id) { el("modalStatus").textContent = "Kies klant/project/activiteit."; return null; }
-
-  return { entry_date, hours, client_id, project_id, activity_id, description, billable };
+function fillClientsDropdown(id){
+  el("fClient").innerHTML = clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+  if(id) el("fClient").value=id;
+}
+function fillProjectsDropdown(id){
+  const cid=el("fClient").value;
+  const list=projects.filter(p=>p.client_id===cid);
+  el("fProject").innerHTML=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+  if(id) el("fProject").value=id;
+}
+function fillActivitiesDropdown(id){
+  el("fActivity").innerHTML=activities.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
+  if(id) el("fActivity").value=id;
 }
 
-function openModal(){
-  el("modal").classList.add("open");
-}
-function closeModal(){
-  el("modal").classList.remove("open");
-}
+/* ======================
+   MODAL VIS
+====================== */
+function openModal(){ el("modal").classList.add("open"); }
+function closeModal(){ el("modal").classList.remove("open"); }
