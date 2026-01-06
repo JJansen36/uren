@@ -224,6 +224,7 @@ function renderWeekDays(){
       selectedDate = iso;
       renderWeekDays();
       await loadWorkdayForSelectedDate();
+      await loadWeek(); // ⬅️ DIT ERBIJ
     };
 
     cont.appendChild(btn);
@@ -238,16 +239,16 @@ async function loadWeek(){
   el("weekLabel").textContent =
     `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
 
-  const { data, error } = await sb
+    const { data, error } = await sb
     .from("time_entries")
     .select(`
-      id, entry_date, workday_id, hours, description, billable,
-      client_id, project_id, activity_id,
-      clients(name), projects(name), activities(name)
+        id, entry_date, workday_id, hours, description, billable,
+        client_id, project_id, activity_id,
+        clients(name), projects(name), activities(name)
     `)
-    .gte("entry_date", toISODate(weekStart))
-    .lte("entry_date", toISODate(end))
-    .order("entry_date");
+    .eq("entry_date", selectedDate)
+    .order("id");
+
 
   if (error){
     el("hint").textContent = error.message;
@@ -286,6 +287,7 @@ function renderTable(rows){
       selectedDate = btn.dataset.day;
       renderWeekDays();
       await loadWorkdayForSelectedDate();
+      await loadWeek(); // ⬅️ DIT ERBIJ      
     };
   });
 
