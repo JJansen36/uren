@@ -1,4 +1,4 @@
-// app.js — FIXED & STABLE VERSION
+// app.js — CLEAN & STABLE VERSION (normuren + dagselectie)
 
 import { makeSupabaseClient, requireSession, getMyProfile } from "./auth.js";
 import {
@@ -25,6 +25,9 @@ let activities = [];
 
 let editingId = null;
 
+// normuren per dag
+let DAILY_NORM = 7.75;
+
 /* ======================
    INIT
 ====================== */
@@ -35,8 +38,10 @@ async function init(){
   if (!session) return;
 
   profile = await getMyProfile(sb);
-  el("meBadge").textContent = `${profile.name || 'Gebruiker'} • ${profile.role}`;
+  el("meBadge").textContent = `${profile.name || "Gebruiker"} • ${profile.role}`;
   if (profile.role === "admin") el("adminLink").style.display = "inline-flex";
+
+  DAILY_NORM = Number(profile.daily_norm || 7.75);
 
   el("btnLogout").onclick = async ()=>{
     await sb.auth.signOut();
@@ -49,11 +54,6 @@ async function init(){
 
   selectedDate = toISODate(new Date());
 
-  renderWeekDays();
-
-
-  el("btnSaveDay").onclick = saveWorkday;
-
   wireWeekNav();
   wireModal();
 
@@ -61,7 +61,10 @@ async function init(){
     el(id).addEventListener("input", recalcDayTotal);
   });
 
+  el("btnSaveDay").onclick = saveWorkday;
+
   await loadReferenceData();
+  renderWeekDays();
   await loadWeek();
   await loadWorkdayForSelectedDate();
 }
@@ -89,9 +92,9 @@ function recalcDayTotal(){
    WORKDAY
 ====================== */
 async function loadWorkdayForSelectedDate(){
-  el("dayStatus").textContent = `Werkdag: ${formatNLDate(selectedDate)}`;
+  el("dayStatus").textContent = `Werkdag ${formatNLDate(selectedDate)}`;
 
-  const { data, error } = await sb
+  const { data: wd, error } = await sb
     .from("workdays")
     .select("*")
     .eq("user_id", session.user.id)
@@ -99,46 +102,47 @@ async function loadWorkdayForSelectedDate(){
     .maybeSingle();
 
   if (error){
-    el("dayStatus").textContent =
-  `Werkdag ${formatNLDate(selectedDate)} — ${used.toFixed(2)}u gespecificeerd / ${remaining.toFixed(2)}u resterend`;
+    el("dayStatus").textContent = error.message;
     return;
   }
 
-  if (!data){
+  if (!wd){
     el("dStart").value = "";
     el("dEnd").value = "";
     el("dPause").value = 30;
     el("dTotal").value = "";
+    el("dayStatus").textContent =
+      `Werkdag ${formatNLDate(selectedDate)} — geen werkdag opgeslagen`;
     return;
   }
 
-  el("dStart").value = data.start_time;
-  el("dEnd").value = data.end_time;
-  el("dPause").value = data.break_minutes;
-  el("dTotal").value = data.total_hours.toFixed(2).replace(".", ",");
-  // bereken gespecificeerde uren
-const { data: entries } = await sb
-  .from("time_entries")
-  .select("hours")
-  .eq("workday_id", data?.id || null);
+  el("dStart").value = wd.start_time;
+  el("dEnd").value = wd.end_time;
+  el("dPause").value = wd.break_minutes;
+  el("dTotal").value = wd.total_hours.toFixed(2).replace(".", ",");
 
-const used = (entries || []).reduce(
-  (t, e) => t + Number(e.hours || 0),
-  0
-);
+  const { data: entries } = await sb
+    .from("time_entries")
+    .select("hours")
+    .eq("workday_id", wd.id);
 
-const remaining = Math.max(0, (data?.total_hours || 0) - used);
+  const specified = (entries||[]).reduce(
+    (t,e)=>t+Number(e.hours||0),0
+  );
 
-el("dayStatus").textContent =
-  `Werkdag ${formatNLDate(selectedDate)} — ` +
-  `${used.toFixed(2)}u gespecificeerd / ` +
-  `${remaining.toFixed(2)}u resterend`;
+  const worked = Number(wd.total_hours || 0);
+  const saldo = worked - DAILY_NORM;
+  const sign = saldo > 0 ? "+" : "";
 
+  el("dayStatus").innerHTML = `
+    <b>Werkdag ${formatNLDate(selectedDate)}</b><br>
+    ${worked.toFixed(2)}u gewerkt · norm ${DAILY_NORM.toFixed(2)}u<br>
+    ${specified.toFixed(2)}u gespecificeerd ·
+    <b>${sign}${saldo.toFixed(2)}u saldo</b>
+  `;
 }
 
 async function saveWorkday(){
-  el("dayStatus").textContent = "";
-
   const start = el("dStart").value;
   const end   = el("dEnd").value;
   const pause = Number(el("dPause").value||0);
@@ -159,57 +163,91 @@ async function saveWorkday(){
     total_hours: total
   }, { onConflict: "user_id,work_date" });
 
-  el("dayStatus").textContent = error ? error.message : "Werkdag opgeslagen.";
+  if (error){
+    el("dayStatus").textContent = error.message;
+    return;
+  }
+
+  await loadWorkdayForSelectedDate();
+  await loadWeek();
 }
 
 /* ======================
-   WEEK OVERVIEW
+   WEEK NAV & DAYS
 ====================== */
 function wireWeekNav(){
-  el("prevWeek").onclick = ()=>{ weekStart = addDays(weekStart,-7); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
-  el("nextWeek").onclick = ()=>{ weekStart = addDays(weekStart, 7); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
-  el("thisWeek").onclick = ()=>{ weekStart = startOfISOWeek(new Date()); setQueryParam("weekStart", toISODate(weekStart)); loadWeek(); };
+  el("prevWeek").onclick = ()=> changeWeek(-7);
+  el("nextWeek").onclick = ()=> changeWeek(7);
+  el("thisWeek").onclick = ()=>{
+    weekStart = startOfISOWeek(new Date());
+    setQueryParam("weekStart", toISODate(weekStart));
+    selectedDate = toISODate(weekStart);
+    refreshWeek();
+  };
 
   el("btnAdd").onclick = openModalForCreate;
   el("btnExport").onclick = ()=>{
     location.href = `report.html?weekStart=${encodeURIComponent(toISODate(weekStart))}`;
   };
-  el("prevWeek").onclick = async ()=>{
-  weekStart = addDays(weekStart,-7);
+}
+
+function changeWeek(delta){
+  weekStart = addDays(weekStart, delta);
   setQueryParam("weekStart", toISODate(weekStart));
   selectedDate = toISODate(weekStart);
+  refreshWeek();
+}
+
+async function refreshWeek(){
   renderWeekDays();
   await loadWeek();
   await loadWorkdayForSelectedDate();
-};
-
 }
 
+function renderWeekDays(){
+  const cont = el("weekDays");
+  if (!cont) return;
+
+  cont.innerHTML = "";
+  const labels = ["ma","di","wo","do","vr","za","zo"];
+
+  for (let i=0;i<7;i++){
+    const d = addDays(weekStart,i);
+    const iso = toISODate(d);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "week-day" + (iso===selectedDate?" active":"");
+    btn.innerHTML = `${labels[i]}<small>${String(d.getDate()).padStart(2,"0")}</small>`;
+
+    btn.onclick = async ()=>{
+      selectedDate = iso;
+      renderWeekDays();
+      await loadWorkdayForSelectedDate();
+    };
+
+    cont.appendChild(btn);
+  }
+}
+
+/* ======================
+   WEEK OVERVIEW
+====================== */
 async function loadWeek(){
-  const end = addDays(weekStart, 6);
+  const end = addDays(weekStart,6);
   el("weekLabel").textContent =
     `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
 
-const { data, error } = await sb
-  .from("time_entries")
-  .select(`
-    id,
-    entry_date,
-    workday_id,
-    hours,
-    description,
-    billable,
-    client_id,
-    project_id,
-    activity_id,
-    clients(name),
-    projects(name),
-    activities(name)
-  `)
-  .gte("entry_date", toISODate(weekStart))
-  .lte("entry_date", toISODate(end))
-  .order("entry_date", { ascending: true });
-
+  const { data, error } = await sb
+    .from("time_entries")
+    .select(`
+      id, entry_date, workday_id, hours, description, billable,
+      client_id, project_id, activity_id,
+      clients(name), projects(name), activities(name)
+    `)
+    .gte("entry_date", toISODate(weekStart))
+    .lte("entry_date", toISODate(end))
+    .order("entry_date");
 
   if (error){
     el("hint").textContent = error.message;
@@ -221,14 +259,18 @@ const { data, error } = await sb
   el("hint").textContent = data?.length ? "" : "Nog geen uren deze week.";
 }
 
+function renderKPIs(rows){
+  const total = sum(rows,r=>Number(r.hours||0));
+  const bill = sum(rows.filter(r=>r.billable),r=>Number(r.hours||0));
+  el("kpiTotal").textContent = formatHours(total);
+  el("kpiBillable").textContent = formatHours(bill);
+  el("kpiNonBillable").textContent = formatHours(total-bill);
+}
+
 function renderTable(rows){
   tbody.innerHTML = rows.map(r=>`
     <tr>
-      <td>
-        <button class="link-day" data-day="${r.entry_date}">
-          ${formatNLDate(r.entry_date)}
-        </button>
-      </td>
+      <td><button class="link-day" data-day="${r.entry_date}">${formatNLDate(r.entry_date)}</button></td>
       <td>${escapeHtml(r.clients?.name||"-")}</td>
       <td>${escapeHtml(r.projects?.name||"-")}</td>
       <td>${escapeHtml(r.activities?.name||"-")}</td>
@@ -242,6 +284,7 @@ function renderTable(rows){
   tbody.querySelectorAll("button.link-day").forEach(btn=>{
     btn.onclick = async ()=>{
       selectedDate = btn.dataset.day;
+      renderWeekDays();
       await loadWorkdayForSelectedDate();
     };
   });
@@ -250,42 +293,6 @@ function renderTable(rows){
     btn.onclick = ()=> openModalForEdit(btn.dataset.edit, rows);
   });
 }
-
-function renderKPIs(rows){
-  const total = sum(rows, r=>Number(r.hours||0));
-  const bill = sum(rows.filter(r=>r.billable), r=>Number(r.hours||0));
-  el("kpiTotal").textContent = formatHours(total);
-  el("kpiBillable").textContent = formatHours(bill);
-  el("kpiNonBillable").textContent = formatHours(total-bill);
-}
-
-function renderWeekDays(){
-  const cont = el("weekDays");
-  cont.innerHTML = "";
-
-  const labels = ["ma","di","wo","do","vr","za","zo"];
-
-  for (let i = 0; i < 7; i++){
-    const d = addDays(weekStart, i);
-    const iso = toISODate(d);
-
-    const btn = document.createElement("div");
-    btn.className = "week-day" + (iso === selectedDate ? " active" : "");
-    btn.innerHTML = `
-      ${labels[i]}
-      <small>${String(d.getDate()).padStart(2,"0")}</small>
-    `;
-
-    btn.onclick = async ()=>{
-      selectedDate = iso;
-      renderWeekDays();
-      await loadWorkdayForSelectedDate();
-    };
-
-    cont.appendChild(btn);
-  }
-}
-
 
 /* ======================
    MODAL / TIME ENTRIES
@@ -301,24 +308,24 @@ function wireModal(){
     if (!payload) return;
 
     const q = editingId
-      ? sb.from("time_entries").update(payload).eq("id", editingId)
+      ? sb.from("time_entries").update(payload).eq("id",editingId)
       : sb.from("time_entries").insert({ ...payload, user_id: session.user.id });
 
     const { error } = await q;
     if (error) el("modalStatus").textContent = error.message;
     else{
-  closeModal();
-  await loadWeek();                  // ⬅️ DIT WAS NODIG
-  await loadWorkdayForSelectedDate(); // ⬅️ status bijwerken
-}
-
+      closeModal();
+      await loadWeek();
+      await loadWorkdayForSelectedDate();
+    }
   };
 
   el("btnDelete").onclick = async ()=>{
     if (!editingId) return;
-    await sb.from("time_entries").delete().eq("id", editingId);
+    await sb.from("time_entries").delete().eq("id",editingId);
     closeModal();
-    loadWeek();
+    await loadWeek();
+    await loadWorkdayForSelectedDate();
   };
 }
 
@@ -334,29 +341,6 @@ function openModalForCreate(){
   fillActivitiesDropdown(activities[0]?.id);
   el("fDesc").value="";
   openModal();
-
-  // automatisch resterende uren invullen
-(async ()=>{
-  const { data: wd } = await sb
-    .from("workdays")
-    .select("id,total_hours")
-    .eq("user_id", session.user.id)
-    .eq("work_date", selectedDate)
-    .maybeSingle();
-
-  if (!wd) return;
-
-  const { data: entries } = await sb
-    .from("time_entries")
-    .select("hours")
-    .eq("workday_id", wd.id);
-
-  const used = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
-  const remaining = Math.max(0, wd.total_hours - used);
-
-  el("fHours").value = remaining.toFixed(2);
-})();
-
 }
 
 function openModalForEdit(id, rows){
@@ -377,37 +361,39 @@ function openModalForEdit(id, rows){
 
 async function getFormPayload(){
   const hours = Number(el("fHours").value);
-  if (!hours || hours<=0){ el("modalStatus").textContent="Vul geldige uren in."; return null; }
+  if (!hours || hours<=0){
+    el("modalStatus").textContent="Vul geldige uren in.";
+    return null;
+  }
 
   const { data: wd } = await sb
     .from("workdays")
     .select("id,total_hours")
-    .eq("user_id", session.user.id)
-    .eq("work_date", selectedDate)
+    .eq("user_id",session.user.id)
+    .eq("work_date",selectedDate)
     .maybeSingle();
 
-  if (!wd){ el("modalStatus").textContent="Sla eerst de werkdag op."; return null; }
+  if (!wd){
+    el("modalStatus").textContent="Sla eerst de werkdag op.";
+    return null;
+  }
 
-  const { data: dayEntries } = await sb
+  const { data: entries } = await sb
     .from("time_entries")
     .select("id,hours")
-    .eq("workday_id", wd.id);
+    .eq("workday_id",wd.id);
 
-  let used = (dayEntries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
+  let used = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
   if (editingId){
-    const cur = dayEntries.find(e=>e.id===editingId);
+    const cur = entries.find(e=>e.id===editingId);
     if (cur) used -= Number(cur.hours||0);
   }
 
-const newTotal = used + hours;
-
-// ❌ alleen blokkeren als je OVER het dagtotaal gaat
-if (newTotal > wd.total_hours + 0.01){
-  el("modalStatus").textContent =
-    `Te veel uren (${newTotal.toFixed(2)}) – dagtotaal is ${wd.total_hours.toFixed(2)}`;
-  return null;
-}
-
+  if (used + hours > wd.total_hours + 0.01){
+    el("modalStatus").textContent =
+      `Te veel uren (${(used+hours).toFixed(2)}) – dagtotaal is ${wd.total_hours.toFixed(2)}`;
+    return null;
+  }
 
   return {
     entry_date: selectedDate,
@@ -431,7 +417,9 @@ async function loadReferenceData(){
     sb.from("activities").select("*").eq("active",true)
   ]);
   clients=c.data||[]; projects=p.data||[]; activities=a.data||[];
-  fillClientsDropdown(); fillProjectsDropdown(); fillActivitiesDropdown();
+  fillClientsDropdown();
+  fillProjectsDropdown();
+  fillActivitiesDropdown();
 }
 
 function fillClientsDropdown(id){
@@ -439,13 +427,13 @@ function fillClientsDropdown(id){
   if(id) el("fClient").value=id;
 }
 function fillProjectsDropdown(id){
-  const cid=el("fClient").value;
-  const list=projects.filter(p=>p.client_id===cid);
-  el("fProject").innerHTML=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+  const cid = el("fClient").value;
+  const list = projects.filter(p=>p.client_id===cid);
+  el("fProject").innerHTML = list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
   if(id) el("fProject").value=id;
 }
 function fillActivitiesDropdown(id){
-  el("fActivity").innerHTML=activities.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
+  el("fActivity").innerHTML = activities.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
   if(id) el("fActivity").value=id;
 }
 
