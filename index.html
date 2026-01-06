@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Urenregistratie – Login</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Urenregistratie</h1>
+        <span class="badge">Web app</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Inloggen</h2>
+
+      <div class="row">
+        <div class="col">
+          <label class="help">E-mail</label>
+          <input id="email" type="email" placeholder="naam@bedrijf.nl" />
+        </div>
+        <div class="col">
+          <label class="help">Wachtwoord</label>
+          <input id="password" type="password" placeholder="••••••••" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div class="col"><button class="primary" id="btnLogin">Login</button></div>
+        <div class="col"><button class="ghost" id="btnSignup">Account aanmaken</button></div>
+      </div>
+
+      <p class="help" id="status"></p>
+      <div class="hr"></div>
+      <p class="help">
+        Tip: maak de eerste admin aan via Supabase dashboard en zet daarna in <b>profiles.role</b> op <b>admin</b>.
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { makeSupabaseClient } from "./auth.js";
+
+    const sb = makeSupabaseClient();
+    const $ = (id) => document.getElementById(id);
+
+    async function ensureProfile(user){
+      // Probeert profiel te maken als het niet bestaat
+      const { data: existing } = await sb
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) return existing;
+
+      // Insert zelf profiel (RLS staat insert voor self toe)
+      const { data, error } = await sb
+        .from("profiles")
+        .insert({ user_id: user.id, name: (user.email || '').split('@')[0], role: "user" })
+        .select("id, role")
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    async function goApp(){
+      location.href = "app.html";
+    }
+
+    // Al ingelogd?
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await ensureProfile(session.user);
+      goApp();
+    }
+
+    $("btnLogin").onclick = async () => {
+      $("status").textContent = "";
+      try{
+        const email = $("email").value.trim();
+        const password = $("password").value;
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        await ensureProfile(data.user);
+        goApp();
+      }catch(e){
+        $("status").textContent = e.message || String(e);
+      }
+    };
+
+    $("btnSignup").onclick = async () => {
+      $("status").textContent = "";
+      try{
+        const email = $("email").value.trim();
+        const password = $("password").value;
+        const { data, error } = await sb.auth.signUp({ email, password });
+        if (error) throw error;
+
+        $("status").textContent = "Account aangemaakt. Log nu in.";
+      }catch(e){
+        $("status").textContent = e.message || String(e);
+      }
+    };
+  </script>
+</body>
+</html>

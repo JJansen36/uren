@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Urenstaat – PDF</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar no-print">
+      <div class="brand">
+        <h1>Urenstaat</h1>
+        <span class="badge" id="label">…</span>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="small" onclick="history.back()">← Terug</button>
+        <button class="primary small" id="btnPrint">Print / Opslaan als PDF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 6px 0; font-size:18px;">Urenstaat</h2>
+          <div class="help" id="who">…</div>
+          <div class="help" id="range">…</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill">Export: PDF (print)</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:130px;">Datum</th>
+            <th style="width:170px;">Klant</th>
+            <th style="width:240px;">Project</th>
+            <th style="width:160px;">Activiteit</th>
+            <th>Omschrijving</th>
+            <th style="width:90px;">Uren</th>
+            <th style="width:110px;">Declarabel</th>
+          </tr>
+        </thead>
+        <tbody id="body"></tbody>
+      </table>
+
+      <div class="hr"></div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Totaal uren</div>
+          <div class="value" id="tTotal">0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Declarabel</div>
+          <div class="value" id="tBill">0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Niet declarabel</div>
+          <div class="value" id="tNon">0,00</div>
+        </div>
+      </div>
+
+      <p class="help" id="status"></p>
+    </div>
+  </div>
+
+  <script type="module" src="report.js"></script>
+</body>
+</html>

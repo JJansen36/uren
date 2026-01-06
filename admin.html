@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Urenregistratie – Admin</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Admin</h1>
+        <span class="badge" id="meBadge">…</span>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <a class="pill" href="app.html" style="text-decoration:none;">← Terug</a>
+        <button class="small" id="btnLogout">Uitloggen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Klanten</h2>
+      <div class="row">
+        <div class="col"><input id="newClient" placeholder="Nieuwe klantnaam" /></div>
+        <div class="col"><button class="primary" id="btnAddClient">Toevoegen</button></div>
+      </div>
+      <div class="hr"></div>
+      <table class="table">
+        <thead><tr><th>Naam</th><th>Actief</th><th>Acties</th></tr></thead>
+        <tbody id="clientsBody"></tbody>
+      </table>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Projecten</h2>
+      <div class="row">
+        <div class="col"><select id="projClient"></select></div>
+        <div class="col"><input id="newProject" placeholder="Nieuw project" /></div>
+        <div class="col"><button class="primary" id="btnAddProject">Toevoegen</button></div>
+      </div>
+      <div class="hr"></div>
+      <table class="table">
+        <thead><tr><th>Klant</th><th>Project</th><th>Actief</th><th>Acties</th></tr></thead>
+        <tbody id="projectsBody"></tbody>
+      </table>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Activiteiten</h2>
+      <div class="row">
+        <div class="col"><input id="newActivity" placeholder="Nieuwe activiteit" /></div>
+        <div class="col">
+          <select id="newActivityBillable">
+            <option value="true">Declarabel default: Ja</option>
+            <option value="false">Declarabel default: Nee</option>
+          </select>
+        </div>
+        <div class="col"><button class="primary" id="btnAddActivity">Toevoegen</button></div>
+      </div>
+      <div class="hr"></div>
+      <table class="table">
+        <thead><tr><th>Naam</th><th>Default declarabel</th><th>Actief</th><th>Acties</th></tr></thead>
+        <tbody id="activitiesBody"></tbody>
+      </table>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Profielen (rollen)</h2>
+      <p class="help">
+        Auth gebruikers maak je aan via Supabase Auth (dashboard). Hier beheer je naam/rol.
+      </p>
+      <div class="hr"></div>
+      <table class="table">
+        <thead><tr><th>Naam</th><th>User ID</th><th>Rol</th><th>Acties</th></tr></thead>
+        <tbody id="profilesBody"></tbody>
+      </table>
+      <p class="help" id="status"></p>
+    </div>
+
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

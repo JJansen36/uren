@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Urenregistratie – Week</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Urenregistratie</h1>
+        <span class="badge" id="meBadge">…</span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a class="pill" id="adminLink" href="admin.html" style="display:none; text-decoration:none;">⚙️ Admin</a>
+        <button class="small" id="btnLogout">Uitloggen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="weeknav">
+        <div class="left">
+          <button class="small" id="prevWeek">← Vorige week</button>
+          <button class="small" id="thisWeek">Deze week</button>
+          <button class="small" id="nextWeek">Volgende week →</button>
+        </div>
+        <div class="right">
+          <span class="pill" id="weekLabel">Week …</span>
+          <button class="small" id="btnExport">📄 Export PDF</button>
+          <button class="primary small" id="btnAdd">➕ Uur toevoegen</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Totaal uren deze week</div>
+          <div class="value" id="kpiTotal">0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Declarabel</div>
+          <div class="value" id="kpiBillable">0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Niet declarabel</div>
+          <div class="value" id="kpiNonBillable">0,00</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <table class="table" id="tbl">
+        <thead>
+          <tr>
+            <th style="width:130px;">Datum</th>
+            <th style="width:170px;">Klant</th>
+            <th style="width:220px;">Project</th>
+            <th style="width:150px;">Activiteit</th>
+            <th>Omschrijving</th>
+            <th style="width:90px;">Uren</th>
+            <th style="width:110px;">Declarabel</th>
+            <th style="width:130px;">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <p class="help" id="hint"></p>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal" id="modal">
+    <div class="box">
+      <h2 id="modalTitle">Uur toevoegen</h2>
+
+      <div class="row">
+        <div class="col">
+          <label class="help">Datum</label>
+          <input id="fDate" type="date" />
+        </div>
+        <div class="col">
+          <label class="help">Uren (bijv. 1.5)</label>
+          <input id="fHours" type="number" step="0.25" min="0.25" max="24" placeholder="8" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <label class="help">Klant</label>
+          <select id="fClient"></select>
+        </div>
+        <div class="col">
+          <label class="help">Project</label>
+          <select id="fProject"></select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <label class="help">Activiteit</label>
+          <select id="fActivity"></select>
+        </div>
+        <div class="col">
+          <label class="help">Declarabel</label>
+          <select id="fBillable">
+            <option value="true">Ja</option>
+            <option value="false">Nee</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label class="help">Omschrijving (optioneel)</label>
+        <textarea id="fDesc" placeholder="Korte toelichting..."></textarea>
+      </div>
+
+      <div class="actions">
+        <button class="ghost small" id="btnCancel">Annuleren</button>
+        <button class="danger small" id="btnDelete" style="display:none;">Verwijderen</button>
+        <button class="primary small" id="btnSave">Opslaan</button>
+      </div>
+
+      <p class="help" id="modalStatus"></p>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
