@@ -112,6 +112,24 @@ async function loadWorkdayForSelectedDate(){
   el("dEnd").value = data.end_time;
   el("dPause").value = data.break_minutes;
   el("dTotal").value = data.total_hours.toFixed(2).replace(".", ",");
+  // bereken gespecificeerde uren
+const { data: entries } = await sb
+  .from("time_entries")
+  .select("hours")
+  .eq("workday_id", data?.id || null);
+
+const used = (entries || []).reduce(
+  (t, e) => t + Number(e.hours || 0),
+  0
+);
+
+const remaining = Math.max(0, (data?.total_hours || 0) - used);
+
+el("dayStatus").textContent =
+  `Werkdag ${formatNLDate(selectedDate)} — ` +
+  `${used.toFixed(2)}u gespecificeerd / ` +
+  `${remaining.toFixed(2)}u resterend`;
+
 }
 
 async function saveWorkday(){
@@ -159,18 +177,26 @@ async function loadWeek(){
   el("weekLabel").textContent =
     `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
 
-  const { data, error } = await sb
-    .from("time_entries")
-    .select(`
-      id, entry_date, hours, description, billable,
-      client_id, project_id, activity_id,
-      clients(name),
-      projects(name),
-      activities(name)
-    `)
-    .gte("entry_date", toISODate(weekStart))
-    .lte("entry_date", toISODate(end))
-    .order("entry_date");
+const { data, error } = await sb
+  .from("time_entries")
+  .select(`
+    id,
+    entry_date,
+    workday_id,
+    hours,
+    description,
+    billable,
+    client_id,
+    project_id,
+    activity_id,
+    clients(name),
+    projects(name),
+    activities(name)
+  `)
+  .gte("entry_date", toISODate(weekStart))
+  .lte("entry_date", toISODate(end))
+  .order("entry_date", { ascending: true });
+
 
   if (error){
     el("hint").textContent = error.message;
