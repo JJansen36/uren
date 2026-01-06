@@ -48,6 +48,12 @@ async function init(){
     location.href = "index.html";
   };
 
+  el("btnAddBlock").onclick = ()=>{
+  document.getElementById("blocks").appendChild(createBlockRow({break_minutes:0}));
+  recalcBlocksTotal();
+  };
+
+
   const qs = getQueryParam("weekStart");
   weekStart = qs ? startOfISOWeek(parseISODate(qs)) : startOfISOWeek(new Date());
   setQueryParam("weekStart", toISODate(weekStart));
@@ -72,6 +78,65 @@ async function init(){
 /* ======================
    HELPERS
 ====================== */
+function createBlockRow(block = { id:null, start_time:"", end_time:"", break_minutes:0 }) {
+  const row = document.createElement("div");
+  row.className = "blockRow";
+  row.dataset.id = block.id || "";
+
+  row.innerHTML = `
+    <div>
+      <label>Aanvang</label>
+      <input type="time" class="bStart" value="${block.start_time || ""}">
+    </div>
+    <div>
+      <label>Gereed</label>
+      <input type="time" class="bEnd" value="${block.end_time || ""}">
+    </div>
+    <div>
+      <label>Pauze (min)</label>
+      <input type="number" min="0" step="5" class="bPause" value="${Number(block.break_minutes || 0)}">
+    </div>
+    <button type="button" class="remove">✕</button>
+  `;
+
+  row.querySelector(".remove").onclick = () => {
+    row.remove();
+    recalcBlocksTotal();
+  };
+
+  ["input","change"].forEach(ev=>{
+    row.querySelector(".bStart").addEventListener(ev, recalcBlocksTotal);
+    row.querySelector(".bEnd").addEventListener(ev, recalcBlocksTotal);
+    row.querySelector(".bPause").addEventListener(ev, recalcBlocksTotal);
+  });
+
+  return row;
+}
+
+function getBlocksFromUI(){
+  const rows = Array.from(document.querySelectorAll("#blocks .blockRow"));
+  return rows.map(r=>{
+    const start = r.querySelector(".bStart").value;
+    const end = r.querySelector(".bEnd").value;
+    const pause = Number(r.querySelector(".bPause").value || 0);
+    const total = calcDayHours(start, end, pause);
+    return {
+      id: r.dataset.id || null,
+      start_time: start,
+      end_time: end,
+      break_minutes: pause,
+      total_hours: total
+    };
+  }).filter(b => b.start_time && b.end_time); // alleen geldige blokken
+}
+
+function recalcBlocksTotal(){
+  const blocks = getBlocksFromUI();
+  const total = blocks.reduce((t,b)=>t+Number(b.total_hours||0),0);
+  el("dTotal").value = total.toFixed(2).replace(".", ",");
+}
+
+
 function calcDayHours(start, end, pauseMin){
   if (!start || !end) return 0;
   const [sh, sm] = start.split(":").map(Number);
@@ -94,83 +159,153 @@ function recalcDayTotal(){
 async function loadWorkdayForSelectedDate(){
   el("dayStatus").textContent = `Werkdag ${formatNLDate(selectedDate)}`;
 
-  const { data: wd, error } = await sb
+  // 1) workday row ophalen/aanmaken (we willen altijd workday_id kunnen gebruiken)
+  let { data: wd, error: wdErr } = await sb
     .from("workdays")
     .select("*")
     .eq("user_id", session.user.id)
     .eq("work_date", selectedDate)
     .maybeSingle();
 
-  if (error){
-    el("dayStatus").textContent = error.message;
+  if (wdErr){
+    el("dayStatus").textContent = wdErr.message;
     return;
   }
 
   if (!wd){
-    el("dStart").value = "";
-    el("dEnd").value = "";
-    el("dPause").value = 30;
-    el("dTotal").value = "";
-    el("dayStatus").textContent =
-      `Werkdag ${formatNLDate(selectedDate)} — geen werkdag opgeslagen`;
+    // maak workday aan zonder tijden; total_hours wordt via blocks/trigger gezet
+    const { data: created, error: insErr } = await sb
+      .from("workdays")
+      .insert({ user_id: session.user.id, work_date: selectedDate, total_hours: 0 })
+      .select("*")
+      .single();
+
+    if (insErr){
+      el("dayStatus").textContent = insErr.message;
+      return;
+    }
+    wd = created;
+  }
+
+  // 2) blocks ophalen
+  const { data: blocks, error: bErr } = await sb
+    .from("workday_blocks")
+    .select("id,start_time,end_time,break_minutes,total_hours")
+    .eq("workday_id", wd.id)
+    .order("created_at", { ascending: true });
+
+  if (bErr){
+    el("dayStatus").textContent = bErr.message;
     return;
   }
 
-  el("dStart").value = wd.start_time;
-  el("dEnd").value = wd.end_time;
-  el("dPause").value = wd.break_minutes;
-  el("dTotal").value = wd.total_hours.toFixed(2).replace(".", ",");
+  // 3) UI vullen
+  const cont = document.getElementById("blocks");
+  cont.innerHTML = "";
 
+  if (!blocks || blocks.length === 0){
+    cont.appendChild(createBlockRow({ break_minutes: 30 }));
+  } else {
+    blocks.forEach(b=>{
+      cont.appendChild(createBlockRow(b));
+    });
+  }
+
+  recalcBlocksTotal();
+
+  // 4) gespecificeerde uren ophalen (time_entries)
   const { data: entries } = await sb
     .from("time_entries")
     .select("hours")
     .eq("workday_id", wd.id);
 
-  const specified = (entries||[]).reduce(
-    (t,e)=>t+Number(e.hours||0),0
-  );
+  const specified = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
 
-  const worked = Number(wd.total_hours || 0);
+  // 5) worked uit UI (of wd.total_hours na trigger) – we nemen UI total voor direct feedback
+  const worked = getBlocksFromUI().reduce((t,b)=>t+Number(b.total_hours||0),0);
   const saldo = worked - DAILY_NORM;
   const sign = saldo > 0 ? "+" : "";
 
   el("dayStatus").innerHTML = `
     <b>Werkdag ${formatNLDate(selectedDate)}</b><br>
     ${worked.toFixed(2)}u gewerkt · norm ${DAILY_NORM.toFixed(2)}u<br>
-    ${specified.toFixed(2)}u gespecificeerd ·
-    <b>${sign}${saldo.toFixed(2)}u saldo</b>
+    ${specified.toFixed(2)}u gespecificeerd · <b>${sign}${saldo.toFixed(2)}u saldo</b>
   `;
 }
 
+
 async function saveWorkday(){
-  const start = el("dStart").value;
-  const end   = el("dEnd").value;
-  const pause = Number(el("dPause").value||0);
+  el("dayStatus").textContent = "";
 
-  if (!start || !end){
-    el("dayStatus").textContent = "Vul aanvang en gereed in.";
+  // 1) workday ophalen/aanmaken
+  let { data: wd, error: wdErr } = await sb
+    .from("workdays")
+    .select("id")
+    .eq("user_id", session.user.id)
+    .eq("work_date", selectedDate)
+    .maybeSingle();
+
+  if (wdErr){
+    el("dayStatus").textContent = wdErr.message;
     return;
   }
 
-  const total = calcDayHours(start, end, pause);
+  if (!wd){
+    const { data: created, error: insErr } = await sb
+      .from("workdays")
+      .insert({ user_id: session.user.id, work_date: selectedDate, total_hours: 0 })
+      .select("id")
+      .single();
 
-  const { error } = await sb.from("workdays").upsert({
-    user_id: session.user.id,
-    work_date: selectedDate,
-    start_time: start,
-    end_time: end,
-    break_minutes: pause,
-    total_hours: total
-  }, { onConflict: "user_id,work_date" });
+    if (insErr){
+      el("dayStatus").textContent = insErr.message;
+      return;
+    }
+    wd = created;
+  }
 
-  if (error){
-    el("dayStatus").textContent = error.message;
+  const blocks = getBlocksFromUI();
+  if (blocks.length === 0){
+    el("dayStatus").textContent = "Voeg minimaal 1 tijdblok toe (start + eind).";
     return;
   }
 
+  // 2) bestaande blocks verwijderen (simpel & robuust)
+  const { error: delErr } = await sb
+    .from("workday_blocks")
+    .delete()
+    .eq("workday_id", wd.id);
+
+  if (delErr){
+    el("dayStatus").textContent = delErr.message;
+    return;
+  }
+
+  // 3) nieuwe blocks inserten
+  const payload = blocks.map(b=>({
+    workday_id: wd.id,
+    start_time: b.start_time,
+    end_time: b.end_time,
+    break_minutes: b.break_minutes,
+    total_hours: b.total_hours
+  }));
+
+  const { error: insBlocksErr } = await sb
+    .from("workday_blocks")
+    .insert(payload);
+
+  if (insBlocksErr){
+    el("dayStatus").textContent = insBlocksErr.message;
+    return;
+  }
+
+  // trigger rekent workdays.total_hours uit; herladen voor status/total
   await loadWorkdayForSelectedDate();
   await loadWeek();
+
+  el("dayStatus").textContent = `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
 }
+
 
 /* ======================
    WEEK NAV & DAYS
@@ -370,12 +505,13 @@ async function getFormPayload(){
   }
 
   // Werkdag ophalen
-  const { data: wd, error: wdErr } = await sb
+    const { data: wd } = await sb
     .from("workdays")
     .select("id,total_hours")
     .eq("user_id", session.user.id)
     .eq("work_date", selectedDate)
     .maybeSingle();
+
 
   if (wdErr){
     el("modalStatus").textContent = wdErr.message;
