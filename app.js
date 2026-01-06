@@ -121,9 +121,7 @@ function fillClientsDropdown(selectedId){
   if (selectedId) el("fClient").value = selectedId;
 }
 
-function fillProjectsDropdown(selectedId){
-  fillProjectsDropdown(selectedId);
-}
+
 
 function fillProjectsDropdown(selectedId){
   const clientId = el("fClient").value || (clients[0]?.id);
