@@ -49,6 +49,9 @@ async function init(){
 
   selectedDate = toISODate(new Date());
 
+  renderWeekDays();
+
+
   el("btnSaveDay").onclick = saveWorkday;
 
   wireWeekNav();
@@ -96,7 +99,8 @@ async function loadWorkdayForSelectedDate(){
     .maybeSingle();
 
   if (error){
-    el("dayStatus").textContent = error.message;
+    el("dayStatus").textContent =
+  `Werkdag ${formatNLDate(selectedDate)} — ${used.toFixed(2)}u gespecificeerd / ${remaining.toFixed(2)}u resterend`;
     return;
   }
 
@@ -170,6 +174,15 @@ function wireWeekNav(){
   el("btnExport").onclick = ()=>{
     location.href = `report.html?weekStart=${encodeURIComponent(toISODate(weekStart))}`;
   };
+  el("prevWeek").onclick = async ()=>{
+  weekStart = addDays(weekStart,-7);
+  setQueryParam("weekStart", toISODate(weekStart));
+  selectedDate = toISODate(weekStart);
+  renderWeekDays();
+  await loadWeek();
+  await loadWorkdayForSelectedDate();
+};
+
 }
 
 async function loadWeek(){
@@ -245,6 +258,34 @@ function renderKPIs(rows){
   el("kpiBillable").textContent = formatHours(bill);
   el("kpiNonBillable").textContent = formatHours(total-bill);
 }
+
+function renderWeekDays(){
+  const cont = el("weekDays");
+  cont.innerHTML = "";
+
+  const labels = ["ma","di","wo","do","vr","za","zo"];
+
+  for (let i = 0; i < 7; i++){
+    const d = addDays(weekStart, i);
+    const iso = toISODate(d);
+
+    const btn = document.createElement("div");
+    btn.className = "week-day" + (iso === selectedDate ? " active" : "");
+    btn.innerHTML = `
+      ${labels[i]}
+      <small>${String(d.getDate()).padStart(2,"0")}</small>
+    `;
+
+    btn.onclick = async ()=>{
+      selectedDate = iso;
+      renderWeekDays();
+      await loadWorkdayForSelectedDate();
+    };
+
+    cont.appendChild(btn);
+  }
+}
+
 
 /* ======================
    MODAL / TIME ENTRIES
