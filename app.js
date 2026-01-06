@@ -1,4 +1,4 @@
-// app.js — CLEAN & STABLE VERSION (normuren + dagselectie)
+// app.js — STABLE (multi time blocks + day filter table)
 
 import { makeSupabaseClient, requireSession, getMyProfile } from "./auth.js";
 import {
@@ -24,8 +24,6 @@ let projects = [];
 let activities = [];
 
 let editingId = null;
-
-// normuren per dag
 let DAILY_NORM = 7.75;
 
 /* ======================
@@ -38,22 +36,20 @@ async function init(){
   if (!session) return;
 
   profile = await getMyProfile(sb);
-  el("meBadge").textContent = `${profile.name || "Gebruiker"} • ${profile.role}`;
-  if (profile.role === "admin") el("adminLink").style.display = "inline-flex";
+  if (el("meBadge")) el("meBadge").textContent = `${profile.name || "Gebruiker"} • ${profile.role}`;
+  if (profile.role === "admin" && el("adminLink")) el("adminLink").style.display = "inline-flex";
 
   DAILY_NORM = Number(profile.daily_norm || 7.75);
 
-  el("btnLogout").onclick = async ()=>{
-    await sb.auth.signOut();
-    location.href = "index.html";
-  };
+  const btnLogout = el("btnLogout");
+  if (btnLogout){
+    btnLogout.onclick = async ()=>{
+      await sb.auth.signOut();
+      location.href = "index.html";
+    };
+  }
 
-  el("btnAddBlock").onclick = ()=>{
-  document.getElementById("blocks").appendChild(createBlockRow({break_minutes:0}));
-  recalcBlocksTotal();
-  };
-
-
+  // week bepalen via url (weekStart=YYYY-MM-DD), anders huidige week
   const qs = getQueryParam("weekStart");
   weekStart = qs ? startOfISOWeek(parseISODate(qs)) : startOfISOWeek(new Date());
   setQueryParam("weekStart", toISODate(weekStart));
@@ -63,22 +59,38 @@ async function init(){
   wireWeekNav();
   wireModal();
 
-  ["dStart","dEnd","dPause"].forEach(id=>{
-    el(id).addEventListener("input", recalcDayTotal);
-  });
+  // Multi-block UI: + tijdblok knop (alleen als element bestaat)
+  const btnAddBlock = el("btnAddBlock");
+  if (btnAddBlock){
+    btnAddBlock.onclick = ()=>{
+      const blocksEl = el("blocks");
+      if (!blocksEl) return; // voorkomt crash als HTML nog niet aangepast is
+      blocksEl.appendChild(createBlockRow({ break_minutes: 0 }));
+      recalcBlocksTotal();
+    };
+  }
 
-  el("btnSaveDay").onclick = saveWorkday;
+  const btnSaveDay = el("btnSaveDay");
+  if (btnSaveDay) btnSaveDay.onclick = saveWorkday;
 
   await loadReferenceData();
+
   renderWeekDays();
   await loadWeek();
   await loadWorkdayForSelectedDate();
 }
 
 /* ======================
-   HELPERS
+   TIME BLOCK HELPERS
 ====================== */
-function createBlockRow(block = { id:null, start_time:"", end_time:"", break_minutes:0 }) {
+function calcDayHours(start, end, pauseMin){
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return Math.max(0, ((eh*60+em) - (sh*60+sm) - Number(pauseMin||0)) / 60);
+}
+
+function createBlockRow(block = { id:null, start_time:"", end_time:"", break_minutes:0 }){
   const row = document.createElement("div");
   row.className = "blockRow";
   row.dataset.id = block.id || "";
@@ -99,7 +111,7 @@ function createBlockRow(block = { id:null, start_time:"", end_time:"", break_min
     <button type="button" class="remove">✕</button>
   `;
 
-  row.querySelector(".remove").onclick = () => {
+  row.querySelector(".remove").onclick = ()=>{
     row.remove();
     recalcBlocksTotal();
   };
@@ -114,12 +126,16 @@ function createBlockRow(block = { id:null, start_time:"", end_time:"", break_min
 }
 
 function getBlocksFromUI(){
-  const rows = Array.from(document.querySelectorAll("#blocks .blockRow"));
+  const blocksEl = el("blocks");
+  if (!blocksEl) return [];
+  const rows = Array.from(blocksEl.querySelectorAll(".blockRow"));
+
   return rows.map(r=>{
-    const start = r.querySelector(".bStart").value;
-    const end = r.querySelector(".bEnd").value;
-    const pause = Number(r.querySelector(".bPause").value || 0);
+    const start = r.querySelector(".bStart")?.value || "";
+    const end = r.querySelector(".bEnd")?.value || "";
+    const pause = Number(r.querySelector(".bPause")?.value || 0);
     const total = calcDayHours(start, end, pause);
+
     return {
       id: r.dataset.id || null,
       start_time: start,
@@ -127,39 +143,23 @@ function getBlocksFromUI(){
       break_minutes: pause,
       total_hours: total
     };
-  }).filter(b => b.start_time && b.end_time); // alleen geldige blokken
+  }).filter(b => b.start_time && b.end_time);
 }
 
 function recalcBlocksTotal(){
+  const totalEl = el("dTotal");
+  if (!totalEl) return;
+
   const blocks = getBlocksFromUI();
   const total = blocks.reduce((t,b)=>t+Number(b.total_hours||0),0);
-  el("dTotal").value = total.toFixed(2).replace(".", ",");
-}
-
-
-function calcDayHours(start, end, pauseMin){
-  if (!start || !end) return 0;
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  return Math.max(0, ((eh*60+em) - (sh*60+sm) - Number(pauseMin||0)) / 60);
-}
-
-function recalcDayTotal(){
-  const h = calcDayHours(
-    el("dStart").value,
-    el("dEnd").value,
-    el("dPause").value
-  );
-  el("dTotal").value = h.toFixed(2).replace(".", ",");
+  totalEl.value = total.toFixed(2).replace(".", ",");
 }
 
 /* ======================
-   WORKDAY
+   WORKDAY (DAY CONTAINER + BLOCKS)
 ====================== */
-async function loadWorkdayForSelectedDate(){
-  el("dayStatus").textContent = `Werkdag ${formatNLDate(selectedDate)}`;
-
-  // 1) workday row ophalen/aanmaken (we willen altijd workday_id kunnen gebruiken)
+async function ensureWorkday(){
+  // workday ophalen/aanmaken, zodat we altijd workday_id hebben
   let { data: wd, error: wdErr } = await sb
     .from("workdays")
     .select("*")
@@ -167,161 +167,141 @@ async function loadWorkdayForSelectedDate(){
     .eq("work_date", selectedDate)
     .maybeSingle();
 
-  if (wdErr){
-    el("dayStatus").textContent = wdErr.message;
-    return;
-  }
+  if (wdErr) throw wdErr;
 
   if (!wd){
-    // maak workday aan zonder tijden; total_hours wordt via blocks/trigger gezet
     const { data: created, error: insErr } = await sb
       .from("workdays")
       .insert({ user_id: session.user.id, work_date: selectedDate, total_hours: 0 })
       .select("*")
       .single();
 
-    if (insErr){
-      el("dayStatus").textContent = insErr.message;
-      return;
-    }
+    if (insErr) throw insErr;
     wd = created;
   }
 
-  // 2) blocks ophalen
-  const { data: blocks, error: bErr } = await sb
-    .from("workday_blocks")
-    .select("id,start_time,end_time,break_minutes,total_hours")
-    .eq("workday_id", wd.id)
-    .order("created_at", { ascending: true });
-
-  if (bErr){
-    el("dayStatus").textContent = bErr.message;
-    return;
-  }
-
-  // 3) UI vullen
-  const cont = document.getElementById("blocks");
-  cont.innerHTML = "";
-
-  if (!blocks || blocks.length === 0){
-    cont.appendChild(createBlockRow({ break_minutes: 30 }));
-  } else {
-    blocks.forEach(b=>{
-      cont.appendChild(createBlockRow(b));
-    });
-  }
-
-  recalcBlocksTotal();
-
-  // 4) gespecificeerde uren ophalen (time_entries)
-  const { data: entries } = await sb
-    .from("time_entries")
-    .select("hours")
-    .eq("workday_id", wd.id);
-
-  const specified = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
-
-  // 5) worked uit UI (of wd.total_hours na trigger) – we nemen UI total voor direct feedback
-  const worked = getBlocksFromUI().reduce((t,b)=>t+Number(b.total_hours||0),0);
-  const saldo = worked - DAILY_NORM;
-  const sign = saldo > 0 ? "+" : "";
-
-  el("dayStatus").innerHTML = `
-    <b>Werkdag ${formatNLDate(selectedDate)}</b><br>
-    ${worked.toFixed(2)}u gewerkt · norm ${DAILY_NORM.toFixed(2)}u<br>
-    ${specified.toFixed(2)}u gespecificeerd · <b>${sign}${saldo.toFixed(2)}u saldo</b>
-  `;
+  return wd;
 }
 
+async function loadWorkdayForSelectedDate(){
+  const statusEl = el("dayStatus");
+  if (statusEl) statusEl.textContent = `Werkdag ${formatNLDate(selectedDate)}`;
+
+  try{
+    const wd = await ensureWorkday();
+
+    // blocks ophalen
+    const { data: blocks, error: bErr } = await sb
+      .from("workday_blocks")
+      .select("id,start_time,end_time,break_minutes,total_hours,created_at")
+      .eq("workday_id", wd.id)
+      .order("created_at", { ascending: true });
+
+    if (bErr) throw bErr;
+
+    const cont = el("blocks");
+    if (cont){
+      cont.innerHTML = "";
+      if (!blocks || blocks.length === 0){
+        cont.appendChild(createBlockRow({ break_minutes: 30 }));
+      } else {
+        blocks.forEach(b=> cont.appendChild(createBlockRow(b)));
+      }
+    }
+
+    recalcBlocksTotal();
+
+    // gespecificeerde uren (time_entries)
+    const { data: entries, error: eErr } = await sb
+      .from("time_entries")
+      .select("hours")
+      .eq("workday_id", wd.id);
+
+    if (eErr) throw eErr;
+
+    const specified = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
+    const worked = getBlocksFromUI().reduce((t,b)=>t+Number(b.total_hours||0),0);
+    const saldo = worked - DAILY_NORM;
+    const sign = saldo > 0 ? "+" : "";
+
+    if (statusEl){
+      statusEl.innerHTML = `
+        <b>Werkdag ${formatNLDate(selectedDate)}</b><br>
+        ${worked.toFixed(2)}u gewerkt · norm ${DAILY_NORM.toFixed(2)}u<br>
+        ${specified.toFixed(2)}u gespecificeerd · <b>${sign}${saldo.toFixed(2)}u saldo</b>
+      `;
+    }
+  }catch(err){
+    if (statusEl) statusEl.textContent = err?.message || String(err);
+  }
+}
 
 async function saveWorkday(){
-  el("dayStatus").textContent = "";
+  const statusEl = el("dayStatus");
+  if (statusEl) statusEl.textContent = "";
 
-  // 1) workday ophalen/aanmaken
-  let { data: wd, error: wdErr } = await sb
-    .from("workdays")
-    .select("id")
-    .eq("user_id", session.user.id)
-    .eq("work_date", selectedDate)
-    .maybeSingle();
+  try{
+    const wd = await ensureWorkday();
 
-  if (wdErr){
-    el("dayStatus").textContent = wdErr.message;
-    return;
-  }
-
-  if (!wd){
-    const { data: created, error: insErr } = await sb
-      .from("workdays")
-      .insert({ user_id: session.user.id, work_date: selectedDate, total_hours: 0 })
-      .select("id")
-      .single();
-
-    if (insErr){
-      el("dayStatus").textContent = insErr.message;
+    const blocks = getBlocksFromUI();
+    if (blocks.length === 0){
+      if (statusEl) statusEl.textContent = "Voeg minimaal 1 tijdblok toe (start + eind).";
       return;
     }
-    wd = created;
+
+    // simpeler & robuust: delete + insert
+    const { error: delErr } = await sb
+      .from("workday_blocks")
+      .delete()
+      .eq("workday_id", wd.id);
+
+    if (delErr) throw delErr;
+
+    const payload = blocks.map(b=>({
+      workday_id: wd.id,
+      start_time: b.start_time,
+      end_time: b.end_time,
+      break_minutes: b.break_minutes,
+      total_hours: b.total_hours
+    }));
+
+    const { error: insErr } = await sb
+      .from("workday_blocks")
+      .insert(payload);
+
+    if (insErr) throw insErr;
+
+    await loadWorkdayForSelectedDate();
+    await loadWeek();
+
+    if (statusEl) statusEl.textContent = `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
+  }catch(err){
+    if (statusEl) statusEl.textContent = err?.message || String(err);
   }
-
-  const blocks = getBlocksFromUI();
-  if (blocks.length === 0){
-    el("dayStatus").textContent = "Voeg minimaal 1 tijdblok toe (start + eind).";
-    return;
-  }
-
-  // 2) bestaande blocks verwijderen (simpel & robuust)
-  const { error: delErr } = await sb
-    .from("workday_blocks")
-    .delete()
-    .eq("workday_id", wd.id);
-
-  if (delErr){
-    el("dayStatus").textContent = delErr.message;
-    return;
-  }
-
-  // 3) nieuwe blocks inserten
-  const payload = blocks.map(b=>({
-    workday_id: wd.id,
-    start_time: b.start_time,
-    end_time: b.end_time,
-    break_minutes: b.break_minutes,
-    total_hours: b.total_hours
-  }));
-
-  const { error: insBlocksErr } = await sb
-    .from("workday_blocks")
-    .insert(payload);
-
-  if (insBlocksErr){
-    el("dayStatus").textContent = insBlocksErr.message;
-    return;
-  }
-
-  // trigger rekent workdays.total_hours uit; herladen voor status/total
-  await loadWorkdayForSelectedDate();
-  await loadWeek();
-
-  el("dayStatus").textContent = `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
 }
 
-
 /* ======================
-   WEEK NAV & DAYS
+   WEEK NAV & DAY BUTTONS
 ====================== */
 function wireWeekNav(){
-  el("prevWeek").onclick = ()=> changeWeek(-7);
-  el("nextWeek").onclick = ()=> changeWeek(7);
-  el("thisWeek").onclick = ()=>{
+  const prev = el("prevWeek");
+  const next = el("nextWeek");
+  const thisW = el("thisWeek");
+
+  if (prev) prev.onclick = ()=> changeWeek(-7);
+  if (next) next.onclick = ()=> changeWeek(7);
+  if (thisW) thisW.onclick = ()=>{
     weekStart = startOfISOWeek(new Date());
     setQueryParam("weekStart", toISODate(weekStart));
     selectedDate = toISODate(weekStart);
     refreshWeek();
   };
 
-  el("btnAdd").onclick = openModalForCreate;
-  el("btnExport").onclick = ()=>{
+  const btnAdd = el("btnAdd");
+  if (btnAdd) btnAdd.onclick = openModalForCreate;
+
+  const btnExport = el("btnExport");
+  if (btnExport) btnExport.onclick = ()=>{
     location.href = `report.html?weekStart=${encodeURIComponent(toISODate(weekStart))}`;
   };
 }
@@ -346,20 +326,20 @@ function renderWeekDays(){
   cont.innerHTML = "";
   const labels = ["ma","di","wo","do","vr","za","zo"];
 
-  for (let i=0;i<7;i++){
-    const d = addDays(weekStart,i);
+  for (let i=0; i<7; i++){
+    const d = addDays(weekStart, i);
     const iso = toISODate(d);
 
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "week-day" + (iso===selectedDate?" active":"");
+    btn.className = "week-day" + (iso===selectedDate ? " active" : "");
     btn.innerHTML = `${labels[i]}<small>${String(d.getDate()).padStart(2,"0")}</small>`;
 
     btn.onclick = async ()=>{
       selectedDate = iso;
       renderWeekDays();
       await loadWorkdayForSelectedDate();
-      await loadWeek(); // ⬅️ DIT ERBIJ
+      await loadWeek(); // tabel = alleen selectedDate
     };
 
     cont.appendChild(btn);
@@ -367,46 +347,62 @@ function renderWeekDays(){
 }
 
 /* ======================
-   WEEK OVERVIEW
+   DAY TABLE (ONLY selectedDate)
 ====================== */
 async function loadWeek(){
-  const end = addDays(weekStart,6);
-  el("weekLabel").textContent =
-    `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
+  const end = addDays(weekStart, 6);
+  const weekLabel = el("weekLabel");
+  if (weekLabel){
+    weekLabel.textContent =
+      `Week (${formatNLDate(toISODate(weekStart))} – ${formatNLDate(toISODate(end))})`;
+  }
 
-    const { data, error } = await sb
+  const hint = el("hint");
+  if (hint) hint.textContent = "Laden…";
+
+  const { data, error } = await sb
     .from("time_entries")
     .select(`
-        id, entry_date, workday_id, hours, description, billable,
-        client_id, project_id, activity_id,
-        clients(name), projects(name), activities(name)
+      id, entry_date, workday_id, hours, description, billable,
+      client_id, project_id, activity_id,
+      clients(name), projects(name), activities(name)
     `)
     .eq("entry_date", selectedDate)
     .order("id");
 
-
   if (error){
-    el("hint").textContent = error.message;
+    if (hint) hint.textContent = error.message;
+    renderTable([]);
+    renderKPIs([]);
     return;
   }
 
-  renderTable(data||[]);
-  renderKPIs(data||[]);
-  el("hint").textContent = data?.length ? "" : "Nog geen uren deze week.";
+  renderTable(data || []);
+  renderKPIs(data || []);
+
+  if (hint) hint.textContent = (data && data.length) ? "" : "Nog geen uren voor deze dag.";
 }
 
 function renderKPIs(rows){
+  // Let op: KPI's zijn nu per dag (want rows = selectedDate)
   const total = sum(rows,r=>Number(r.hours||0));
   const bill = sum(rows.filter(r=>r.billable),r=>Number(r.hours||0));
-  el("kpiTotal").textContent = formatHours(total);
-  el("kpiBillable").textContent = formatHours(bill);
-  el("kpiNonBillable").textContent = formatHours(total-bill);
+
+  const k1 = el("kpiTotal");
+  const k2 = el("kpiBillable");
+  const k3 = el("kpiNonBillable");
+
+  if (k1) k1.textContent = formatHours(total);
+  if (k2) k2.textContent = formatHours(bill);
+  if (k3) k3.textContent = formatHours(total-bill);
 }
 
 function renderTable(rows){
+  if (!tbody) return;
+
   tbody.innerHTML = rows.map(r=>`
     <tr>
-      <td><button class="link-day" data-day="${r.entry_date}">${formatNLDate(r.entry_date)}</button></td>
+      <td>${formatNLDate(r.entry_date)}</td>
       <td>${escapeHtml(r.clients?.name||"-")}</td>
       <td>${escapeHtml(r.projects?.name||"-")}</td>
       <td>${escapeHtml(r.activities?.name||"-")}</td>
@@ -417,15 +413,6 @@ function renderTable(rows){
     </tr>
   `).join("");
 
-  tbody.querySelectorAll("button.link-day").forEach(btn=>{
-    btn.onclick = async ()=>{
-      selectedDate = btn.dataset.day;
-      renderWeekDays();
-      await loadWorkdayForSelectedDate();
-      await loadWeek(); // ⬅️ DIT ERBIJ      
-    };
-  });
-
   tbody.querySelectorAll("button[data-edit]").forEach(btn=>{
     btn.onclick = ()=> openModalForEdit(btn.dataset.edit, rows);
   });
@@ -435,138 +422,160 @@ function renderTable(rows){
    MODAL / TIME ENTRIES
 ====================== */
 function wireModal(){
-  el("btnCancel").onclick = closeModal;
-  el("modal").onclick = e=>{ if(e.target.id==="modal") closeModal(); };
-  el("fClient").onchange = ()=> fillProjectsDropdown();
+  const btnCancel = el("btnCancel");
+  if (btnCancel) btnCancel.onclick = closeModal;
 
-  el("btnSave").onclick = async ()=>{
-    el("modalStatus").textContent="";
-    const payload = await getFormPayload();
-    if (!payload) return;
+  const modal = el("modal");
+  if (modal){
+    modal.onclick = (e)=>{ if(e.target.id==="modal") closeModal(); };
+  }
 
-    const q = editingId
-      ? sb.from("time_entries").update(payload).eq("id",editingId)
-      : sb.from("time_entries").insert({ ...payload, user_id: session.user.id });
+  const fClient = el("fClient");
+  if (fClient) fClient.onchange = ()=> fillProjectsDropdown();
 
-    const { error } = await q;
-    if (error) el("modalStatus").textContent = error.message;
-    else{
+  const btnSave = el("btnSave");
+  if (btnSave){
+    btnSave.onclick = async ()=>{
+      if (el("modalStatus")) el("modalStatus").textContent = "";
+      const payload = await getFormPayload();
+      if (!payload) return;
+
+      const q = editingId
+        ? sb.from("time_entries").update(payload).eq("id", editingId)
+        : sb.from("time_entries").insert({ ...payload, user_id: session.user.id });
+
+      const { error } = await q;
+      if (error){
+        if (el("modalStatus")) el("modalStatus").textContent = error.message;
+      } else {
+        closeModal();
+        await loadWeek();
+        await loadWorkdayForSelectedDate();
+      }
+    };
+  }
+
+  const btnDelete = el("btnDelete");
+  if (btnDelete){
+    btnDelete.onclick = async ()=>{
+      if (!editingId) return;
+      await sb.from("time_entries").delete().eq("id", editingId);
       closeModal();
       await loadWeek();
       await loadWorkdayForSelectedDate();
-    }
-  };
-
-  el("btnDelete").onclick = async ()=>{
-    if (!editingId) return;
-    await sb.from("time_entries").delete().eq("id",editingId);
-    closeModal();
-    await loadWeek();
-    await loadWorkdayForSelectedDate();
-  };
+    };
+  }
 }
 
 function openModalForCreate(){
   editingId = null;
-  el("modalTitle").textContent = "Uur toevoegen";
-  el("btnDelete").style.display = "none";
-  el("fDate").value = selectedDate;
-  el("fDate").disabled = true;
-  el("fHours").value = "1";
+  if (el("modalTitle")) el("modalTitle").textContent = "Uur toevoegen";
+  if (el("btnDelete")) el("btnDelete").style.display = "none";
+
+  if (el("fDate")){
+    el("fDate").value = selectedDate;
+    el("fDate").disabled = true;
+  }
+
+  if (el("fHours")) el("fHours").value = "1";
   fillClientsDropdown(clients[0]?.id);
   fillProjectsDropdown();
   fillActivitiesDropdown(activities[0]?.id);
-  el("fDesc").value="";
+  if (el("fDesc")) el("fDesc").value = "";
+
   openModal();
 }
 
 function openModalForEdit(id, rows){
   const r = rows.find(x=>x.id===id);
   if (!r) return;
+
   editingId = id;
-  el("modalTitle").textContent = "Uur bewerken";
-  el("btnDelete").style.display = "inline-block";
-  el("fDate").value = r.entry_date;
-  el("fHours").value = r.hours;
+  if (el("modalTitle")) el("modalTitle").textContent = "Uur bewerken";
+  if (el("btnDelete")) el("btnDelete").style.display = "inline-block";
+
+  if (el("fDate")){
+    el("fDate").value = r.entry_date;
+    el("fDate").disabled = true;
+  }
+
+  if (el("fHours")) el("fHours").value = r.hours;
   fillClientsDropdown(r.client_id);
   fillProjectsDropdown(r.project_id);
   fillActivitiesDropdown(r.activity_id);
-  el("fBillable").value = r.billable?"true":"false";
-  el("fDesc").value = r.description||"";
+  if (el("fBillable")) el("fBillable").value = r.billable ? "true" : "false";
+  if (el("fDesc")) el("fDesc").value = r.description || "";
+
   openModal();
 }
 
 async function getFormPayload(){
-  const hours = Number(el("fHours").value);
-
+  const hours = Number(el("fHours")?.value || 0);
   if (!hours || hours <= 0){
-    el("modalStatus").textContent = "Vul geldige uren in.";
+    if (el("modalStatus")) el("modalStatus").textContent = "Vul geldige uren in.";
     return null;
   }
 
-  // Werkdag ophalen
-    const { data: wd } = await sb
+  // workday ophalen (bestaat altijd na loadWorkdayForSelectedDate, maar safe)
+  const { data: wd, error: wdErr } = await sb
     .from("workdays")
     .select("id,total_hours")
     .eq("user_id", session.user.id)
     .eq("work_date", selectedDate)
     .maybeSingle();
 
-
   if (wdErr){
-    el("modalStatus").textContent = wdErr.message;
+    if (el("modalStatus")) el("modalStatus").textContent = wdErr.message;
     return null;
   }
 
   if (!wd){
-    el("modalStatus").textContent = "Sla eerst de werkdag op.";
+    if (el("modalStatus")) el("modalStatus").textContent = "Sla eerst de werkdag op.";
     return null;
   }
 
-  // Bestaande uren van deze dag ophalen
+  // bestaande entries van die dag
   const { data: entries, error: entErr } = await sb
     .from("time_entries")
     .select("id,hours")
     .eq("workday_id", wd.id);
 
   if (entErr){
-    el("modalStatus").textContent = entErr.message;
+    if (el("modalStatus")) el("modalStatus").textContent = entErr.message;
     return null;
   }
 
-  let used = (entries || []).reduce(
-    (t, e) => t + Number(e.hours || 0),
-    0
-  );
+  let used = (entries || []).reduce((t,e)=>t+Number(e.hours||0),0);
 
-  // Bij edit: huidige entry aftrekken
+  // bij edit: huidige entry aftrekken
   if (editingId){
-    const cur = entries.find(e => e.id === editingId);
-    if (cur) used -= Number(cur.hours || 0);
+    const cur = (entries||[]).find(e=>e.id===editingId);
+    if (cur) used -= Number(cur.hours||0);
   }
 
   const newTotal = used + hours;
 
-  // ⚠️ Alleen WAARSCHUWEN, NIET BLOKKEREN
-  if (newTotal > wd.total_hours + 0.01){
-    el("modalStatus").textContent =
-      `Let op: ${(newTotal - wd.total_hours).toFixed(2)}u meer gespecificeerd dan gewerkt`;
+  // alleen waarschuwing (toestaan!)
+  if (newTotal > Number(wd.total_hours || 0) + 0.01){
+    if (el("modalStatus")){
+      el("modalStatus").textContent =
+        `Let op: ${(newTotal - Number(wd.total_hours||0)).toFixed(2)}u meer gespecificeerd dan gewerkt`;
+    }
   } else {
-    el("modalStatus").textContent = "";
+    if (el("modalStatus")) el("modalStatus").textContent = "";
   }
 
   return {
     entry_date: selectedDate,
     workday_id: wd.id,
     hours,
-    client_id: el("fClient").value,
-    project_id: el("fProject").value,
-    activity_id: el("fActivity").value,
-    description: el("fDesc").value || "",
-    billable: el("fBillable").value === "true"
+    client_id: el("fClient")?.value,
+    project_id: el("fProject")?.value,
+    activity_id: el("fActivity")?.value,
+    description: el("fDesc")?.value || "",
+    billable: (el("fBillable")?.value === "true")
   };
 }
-
 
 /* ======================
    LOOKUPS
@@ -577,29 +586,43 @@ async function loadReferenceData(){
     sb.from("projects").select("*").eq("active",true),
     sb.from("activities").select("*").eq("active",true)
   ]);
-  clients=c.data||[]; projects=p.data||[]; activities=a.data||[];
+
+  clients = c.data || [];
+  projects = p.data || [];
+  activities = a.data || [];
+
   fillClientsDropdown();
   fillProjectsDropdown();
   fillActivitiesDropdown();
 }
 
 function fillClientsDropdown(id){
-  el("fClient").innerHTML = clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-  if(id) el("fClient").value=id;
+  const f = el("fClient");
+  if (!f) return;
+  f.innerHTML = clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+  if (id) f.value = id;
 }
+
 function fillProjectsDropdown(id){
-  const cid = el("fClient").value;
-  const list = projects.filter(p=>p.client_id===cid);
-  el("fProject").innerHTML = list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
-  if(id) el("fProject").value=id;
+  const fClient = el("fClient");
+  const fProject = el("fProject");
+  if (!fClient || !fProject) return;
+
+  const cid = fClient.value;
+  const list = projects.filter(p=>String(p.client_id)===String(cid));
+  fProject.innerHTML = list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+  if (id) fProject.value = id;
 }
+
 function fillActivitiesDropdown(id){
-  el("fActivity").innerHTML = activities.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
-  if(id) el("fActivity").value=id;
+  const f = el("fActivity");
+  if (!f) return;
+  f.innerHTML = activities.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
+  if (id) f.value = id;
 }
 
 /* ======================
    MODAL VIS
 ====================== */
-function openModal(){ el("modal").classList.add("open"); }
-function closeModal(){ el("modal").classList.remove("open"); }
+function openModal(){ if (el("modal")) el("modal").classList.add("open"); }
+function closeModal(){ if (el("modal")) el("modal").classList.remove("open"); }
