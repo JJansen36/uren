@@ -21,6 +21,57 @@ let editingId = null;
 
 document.addEventListener("DOMContentLoaded", init);
 
+function calcDayHours(start, end, pauseMin){
+  if (!start || !end) return 0;
+
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+
+  const startMin = sh * 60 + sm;
+  const endMin   = eh * 60 + em;
+
+  const worked = endMin - startMin - Number(pauseMin || 0);
+  return Math.max(0, worked / 60);
+}
+
+
+async function saveWorkday(){
+  el("dayStatus").textContent = "";
+
+  const start = el("dStart").value;
+  const end   = el("dEnd").value;
+  const pause = Number(el("dPause").value || 0);
+
+  if (!start || !end){
+    el("dayStatus").textContent = "Vul aanvang en gereed in.";
+    return;
+  }
+
+  const total = calcDayHours(start, end, pause);
+
+  const payload = {
+    user_id: session.user.id,
+    work_date: toISODate(weekStart), // of geselecteerde dag (zie noot)
+    start_time: start,
+    end_time: end,
+    break_minutes: pause,
+    total_hours: total
+  };
+
+  // upsert: bestaat dag → update, anders insert
+  const { error } = await sb
+    .from("workdays")
+    .upsert(payload, { onConflict: "user_id,work_date" });
+
+  if (error){
+    el("dayStatus").textContent = error.message;
+    return;
+  }
+
+  el("dayStatus").textContent = "Werkdag opgeslagen.";
+}
+
+
 async function init(){
   session = await requireSession(sb);
   if (!session) return;
@@ -52,6 +103,7 @@ function wireWeekNav(){
   el("btnExport").onclick = ()=> {
     const ws = toISODate(weekStart);
     location.href = `report.html?weekStart=${encodeURIComponent(ws)}`;
+  el("btnSaveDay").onclick = saveWorkday;
   };
 }
 
@@ -95,6 +147,18 @@ function wireModal(){
     }
   };
 }
+
+["dStart","dEnd","dPause"].forEach(id=>{
+  el(id).addEventListener("input", ()=>{
+    const h = calcDayHours(
+      el("dStart").value,
+      el("dEnd").value,
+      el("dPause").value
+    );
+    el("dTotal").value = h.toFixed(2).replace('.',',');
+  });
+});
+
 
 async function loadReferenceData(){
   const [cRes, pRes, aRes] = await Promise.all([
@@ -272,6 +336,33 @@ function getFormPayload(){
   const activity_id = el("fActivity").value;
   const description = el("fDesc").value || "";
   const billable = el("fBillable").value === "true";
+  // CONTROLE: specificatie == dagtotaal
+const { data: wd } = await sb
+  .from("workdays")
+  .select("id,total_hours")
+  .eq("user_id", session.user.id)
+  .eq("work_date", entry_date)
+  .single();
+
+if (!wd){
+  el("modalStatus").textContent = "Sla eerst de werkdag (begin/eind/pauze) op.";
+  return null;
+}
+
+const { data: dayEntries } = await sb
+  .from("time_entries")
+  .select("hours")
+  .eq("workday_id", wd.id);
+
+const used = dayEntries.reduce((t,e)=>t+Number(e.hours||0),0);
+const diff = Math.abs((used + hours) - wd.total_hours);
+
+if (diff > 0.01){
+  el("modalStatus").textContent =
+    `Uren (${(used+hours).toFixed(2)}) ≠ dagtotaal (${wd.total_hours.toFixed(2)})`;
+  return null;
+}
+
 
   if (!entry_date) { el("modalStatus").textContent = "Kies een datum."; return null; }
   if (!hours || hours <= 0) { el("modalStatus").textContent = "Vul geldige uren in."; return null; }

@@ -55,6 +55,37 @@
 
       <div class="hr"></div>
 
+<div class="card" id="dayCard">
+  <h2 style="margin:0 0 10px 0;">Werkdag</h2>
+
+  <div class="row">
+    <div class="col">
+      <label class="help">Aanvang</label>
+      <input id="dStart" type="time" />
+    </div>
+    <div class="col">
+      <label class="help">Gereed</label>
+      <input id="dEnd" type="time" />
+    </div>
+    <div class="col">
+      <label class="help">Pauze (min)</label>
+      <input id="dPause" type="number" min="0" step="5" value="30" />
+    </div>
+    <div class="col">
+      <label class="help">Totaal uren</label>
+      <input id="dTotal" type="text" readonly />
+    </div>
+    <div class="col" style="display:flex; align-items:flex-end;">
+      <button class="primary small" id="btnSaveDay">Dag opslaan</button>
+    </div>
+  </div>
+
+  <p class="help" id="dayStatus"></p>
+</div>
+
+<div class="hr"></div>
+
+
       <table class="table" id="tbl">
         <thead>
           <tr>
