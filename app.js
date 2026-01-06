@@ -262,6 +262,29 @@ function openModalForCreate(){
   fillActivitiesDropdown(activities[0]?.id);
   el("fDesc").value="";
   openModal();
+
+  // automatisch resterende uren invullen
+(async ()=>{
+  const { data: wd } = await sb
+    .from("workdays")
+    .select("id,total_hours")
+    .eq("user_id", session.user.id)
+    .eq("work_date", selectedDate)
+    .maybeSingle();
+
+  if (!wd) return;
+
+  const { data: entries } = await sb
+    .from("time_entries")
+    .select("hours")
+    .eq("workday_id", wd.id);
+
+  const used = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
+  const remaining = Math.max(0, wd.total_hours - used);
+
+  el("fHours").value = remaining.toFixed(2);
+})();
+
 }
 
 function openModalForEdit(id, rows){
@@ -304,10 +327,15 @@ async function getFormPayload(){
     if (cur) used -= Number(cur.hours||0);
   }
 
-  if (Math.abs((used+hours)-wd.total_hours)>0.01){
-    el("modalStatus").textContent="Specificatie ≠ dagtotaal";
-    return null;
-  }
+const newTotal = used + hours;
+
+// ❌ alleen blokkeren als je OVER het dagtotaal gaat
+if (newTotal > wd.total_hours + 0.01){
+  el("modalStatus").textContent =
+    `Te veel uren (${newTotal.toFixed(2)}) – dagtotaal is ${wd.total_hours.toFixed(2)}`;
+  return null;
+}
+
 
   return {
     entry_date: selectedDate,
