@@ -273,35 +273,16 @@ button.small{
 }
 
 .day-header td {
-  padding: 8px 6px;
-  background: #04120a;
-  border-top: 2px solid #111;
+  background: #f3f4f6;        /* lichtgrijs */
+  border-top: 1px solid var(--line);
   font-size: 11px;
+  font-weight: 600;
 }
 
 
 
-.table th:nth-child(1),
-.table td:nth-child(1) { width:14%; }  /* Klant */
 
-.table th:nth-child(2),
-.table td:nth-child(2) { width:10%; }  /* Project */
 
-.table th:nth-child(3),
-.table td:nth-child(3) { width:12%; }  /* Activiteit */
-
-.table th:nth-child(4),
-.table td:nth-child(4) { width:44%; }  /* Omschrijving */
-
-.table th:nth-child(5),
-.table td:nth-child(5) {
-  width:10%;
-  text-align:right;
-  white-space:nowrap;
-} /* Uren */
-
-.table th:nth-child(6),
-.table td:nth-child(6) { width:10%; }  /* Declarabel */
 
 .day-header td{
   background:#eef7f1;
