@@ -9,6 +9,59 @@ const el = (id)=>document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", init);
 
+async function loadWeekWorkedHoursReport(sb, userId, weekStart, DAILY_NORM){
+  const end = addDays(weekStart, 6);
+
+  const { data: workdays } = await sb
+    .from("workdays")
+    .select("id")
+    .eq("user_id", userId)
+    .gte("work_date", toISODate(weekStart))
+    .lte("work_date", toISODate(end));
+
+  if (!workdays || workdays.length === 0){
+    return { total: 0, billable: 0, saldo: 0 };
+  }
+
+  const workdayIds = workdays.map(w => w.id);
+
+  const { data: blocks } = await sb
+    .from("workday_blocks")
+    .select("total_hours")
+    .in("workday_id", workdayIds);
+
+  const totalWorked = (blocks || []).reduce(
+    (t,b)=>t+Number(b.total_hours||0), 0
+  );
+
+  const { data: entries } = await sb
+    .from("time_entries")
+    .select("hours,billable")
+    .eq("user_id", userId)
+    .gte("entry_date", toISODate(weekStart))
+    .lte("entry_date", toISODate(end));
+
+  const billable = (entries || [])
+    .filter(e=>e.billable)
+    .reduce((t,e)=>t+Number(e.hours||0),0);
+
+const normDays = workdays.filter(w=>{
+  const d = new Date(w.work_date);
+  const day = d.getDay();
+  return day !== 0 && day !== 6;
+}).length;
+
+const normTotal = normDays * DAILY_NORM;
+
+
+  return {
+    total: totalWorked,
+    billable,
+    saldo: totalWorked - normTotal
+  };
+}
+
+
 async function init(){
   const session = await requireSession(sb);
   if (!session) return;
@@ -60,13 +113,30 @@ async function init(){
     </tr>
   `).join("");
 
-  const total = sum(rows, r=>Number(r.hours||0));
-  const bill = sum(rows.filter(r=>r.billable), r=>Number(r.hours||0));
-  const non = total - bill;
+const DAILY_NORM = Number(profile.daily_norm || 7.75);
 
-  el("tTotal").textContent = formatHours(total);
-  el("tBill").textContent = formatHours(bill);
-  el("tNon").textContent = formatHours(non);
+const { total, billable, saldo } =
+  await loadWeekWorkedHoursReport(sb, session.user.id, ws, DAILY_NORM);
+
+el("tTotal").textContent = formatHours(total);
+el("tBill").textContent = formatHours(billable);
+el("tNon").textContent = formatHours(total - billable);
+
+// saldo
+const saldoEl = el("kpiSaldo");
+const saldoBox = el("kpiSaldoBox");
+
+if (saldoEl){
+  const sign = saldo > 0 ? "+" : "";
+  saldoEl.textContent = sign + formatHours(saldo);
+}
+
+if (saldoBox){
+  saldoBox.classList.remove("positive","negative");
+  if (saldo > 0.01) saldoBox.classList.add("positive");
+  else if (saldo < -0.01) saldoBox.classList.add("negative");
+}
+
 
   el("status").textContent = rows.length ? "" : "Geen uren in deze week.";
 }
