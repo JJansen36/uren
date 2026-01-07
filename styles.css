@@ -97,14 +97,15 @@ button.small{
 .help{color:var(--muted); font-size:13px; margin-top:8px}
 .hr{height:1px; background:var(--line); margin:14px 0}
 
-.table{
+ .table{
   width:100%;
-  border-collapse:separate;
-  border-spacing:0;
+  table-layout: fixed;      /* 🔑 verplicht */
+  border-collapse: collapse;/* 🔑 verplicht */
   overflow:hidden;
   border:1px solid var(--line);
   border-radius:12px;
 }
+
 .table th, .table td{
   padding:10px 10px;
   border-bottom:1px solid var(--line);
@@ -243,24 +244,29 @@ button.small{
   font-size: 11px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
 
-/* Kolombreedtes */
-th:nth-child(1), td:nth-child(1) { width: 14%; } /* Klant */
-th:nth-child(2), td:nth-child(2) { width: 10%; } /* Project (smaller) */
-th:nth-child(3), td:nth-child(3) { width: 14%; } /* Activiteit */
-th:nth-child(4), td:nth-child(4) { width: 38%; } /* Omschrijving (breder) */
-th:nth-child(5), td:nth-child(5) { width: 12%; text-align:right; } /* Uren */
-th:nth-child(6), td:nth-child(6) { width: 12%; } /* Declarabel */
 
-td:nth-child(4) {
-  white-space: normal;
-  word-break: break-word;
-}
+.table th:nth-child(1),
+.table td:nth-child(1) { width:14%; }  /* Klant */
+
+.table th:nth-child(2),
+.table td:nth-child(2) { width:10%; }  /* Project */
+
+.table th:nth-child(3),
+.table td:nth-child(3) { width:12%; }  /* Activiteit */
+
+.table th:nth-child(4),
+.table td:nth-child(4) { width:44%; }  /* Omschrijving */
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width:10%;
+  text-align:right;
+  white-space:nowrap;
+} /* Uren */
+
+.table th:nth-child(6),
+.table td:nth-child(6) { width:10%; }  /* Declarabel */
 
 
 
@@ -320,7 +326,7 @@ td:nth-child(4) {
     font-size: 11px;
   }
 
-  table {
+  .table {
     font-size: 10.5px;
   }
 
