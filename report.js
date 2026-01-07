@@ -61,6 +61,46 @@ const normTotal = normDays * DAILY_NORM;
   };
 }
 
+async function loadWorkedBlocksByDate(sb, userId, weekStart){
+  const end = addDays(weekStart, 6);
+
+  const { data: workdays } = await sb
+    .from("workdays")
+    .select("id, work_date")
+    .eq("user_id", userId)
+    .gte("work_date", toISODate(weekStart))
+    .lte("work_date", toISODate(end));
+
+  if (!workdays || workdays.length === 0) return {};
+
+  const workdayIds = workdays.map(w => w.id);
+
+  const { data: blocks } = await sb
+    .from("workday_blocks")
+    .select("workday_id,start_time,end_time,break_minutes,total_hours")
+    .in("workday_id", workdayIds)
+    .order("start_time");
+
+  const map = {};
+
+  workdays.forEach(w => {
+    map[w.work_date] = {
+      total: 0,
+      blocks: []
+    };
+  });
+
+  (blocks || []).forEach(b => {
+    const wd = workdays.find(w => w.id === b.workday_id);
+    if (!wd) return;
+
+    map[wd.work_date].blocks.push(b);
+    map[wd.work_date].total += Number(b.total_hours || 0);
+  });
+
+  return map;
+}
+
 
 async function init(){
   const session = await requireSession(sb);
@@ -107,25 +147,45 @@ const byDate = {};
 rows.forEach(r => {
   if (!byDate[r.entry_date]) byDate[r.entry_date] = [];
   byDate[r.entry_date].push(r);
+
+  
 });
 
 let html = "";
 
 Object.keys(byDate).sort().forEach(date => {
   const dayRows = byDate[date];
-  const dayTotal = sum(dayRows, r => Number(r.hours || 0));
+  const worked = workedByDate[date];
 
-  // dagkop
+  const workedTotal = worked ? worked.total : 0;
+
   html += `
     <tr class="day-header">
       <td colspan="7">
         <b>${formatNLDate(date)}</b>
         <span class="day-total">
-          Totaal gewerkt: ${formatHours(dayTotal)}
+          Totaal gewerkt: ${formatHours(workedTotal)}
         </span>
       </td>
     </tr>
   `;
+
+  // ⏱ werkblokken
+  if (worked && worked.blocks.length){
+    worked.blocks.forEach(b => {
+      html += `
+        <tr class="work-block">
+          <td colspan="7">
+            ⏱ ${b.start_time} – ${b.end_time}
+            <span class="pause">
+              (pauze ${b.break_minutes || 0} min)
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
 
   // regels van die dag
   dayRows.forEach(r => {

@@ -254,6 +254,17 @@ button.small{
   font-size: 10.5px;
   color: #374151;
 }
+.work-block td {
+  font-size: 10px;
+  color: #374151;
+  padding: 4px 6px 6px 18px;
+  background: #fafafa;
+}
+
+.work-block .pause {
+  color: #6b7280;
+  font-style: italic;
+}
 
 
 
@@ -301,6 +312,9 @@ button.small{
   }
   .day-header td {
       background: #e5e7eb;
+  }
+  .work-block td {
+    background: #f9fafb;
   }
     
 }
