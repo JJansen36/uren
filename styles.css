@@ -250,12 +250,20 @@ button.small{
   .card{border:none}
   .table{border:1px solid #ddd}
   .table th{background:#f3f3f3; color:#333}
-}
 
 
+    table {
+    table-layout: fixed;
+  }
 
+  th:nth-child(1), td:nth-child(1) { width: 9%; }
+  th:nth-child(2), td:nth-child(2) { width: 13%; }
+  th:nth-child(3), td:nth-child(3) { width: 11%; }
+  th:nth-child(4), td:nth-child(4) { width: 14%; }
+  th:nth-child(5), td:nth-child(5) { width: 31%; }
+  th:nth-child(6), td:nth-child(6) { width: 10%; }
+  th:nth-child(7), td:nth-child(7) { width: 12%; }
 
-@media print{
 
   body {
     font-size: 11px;
