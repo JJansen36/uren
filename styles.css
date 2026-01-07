@@ -243,6 +243,27 @@ button.small{
   font-size: 11px;
 }
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* Kolombreedtes */
+th:nth-child(1), td:nth-child(1) { width: 14%; } /* Klant */
+th:nth-child(2), td:nth-child(2) { width: 10%; } /* Project (smaller) */
+th:nth-child(3), td:nth-child(3) { width: 14%; } /* Activiteit */
+th:nth-child(4), td:nth-child(4) { width: 38%; } /* Omschrijving (breder) */
+th:nth-child(5), td:nth-child(5) { width: 12%; text-align:right; } /* Uren */
+th:nth-child(6), td:nth-child(6) { width: 12%; } /* Declarabel */
+
+td:nth-child(4) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+
+
 /* PRINT / PDF (report.html) */
 @media print {
   body{background:#fff; color:#000}
@@ -251,19 +272,24 @@ button.small{
   .table{border:1px solid #ddd}
   .table th{background:#f3f3f3; color:#333}
 
-
-    table {
-    table-layout: fixed;
+  th:nth-child(5),
+  td:nth-child(5) {
+    text-align: right;
+    white-space: nowrap;
   }
 
-  th:nth-child(1), td:nth-child(1) { width: 5%; }  /* Datum */
-  th:nth-child(2), td:nth-child(2) { width: 14%; }  /* Klant */
-  th:nth-child(3), td:nth-child(3) { width: 12%; }  /* Project */
-  th:nth-child(4), td:nth-child(4) { width: 14%; }  /* Activiteit */
-  th:nth-child(5), td:nth-child(5) { width: 38%; }  /* Omschrijving */
-  th:nth-child(6), td:nth-child(6) { width: 5%; text-align:right; } /* Uren */
-  th:nth-child(7), td:nth-child(7) { width: 12%; }  /* Declarabel */
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
 
+  /* Kolombreedtes (PDF) */
+  th:nth-child(1), td:nth-child(1) { width: 14%; } /* Klant */
+  th:nth-child(2), td:nth-child(2) { width: 9%; }  /* Project */
+  th:nth-child(3), td:nth-child(3) { width: 12%; } /* Activiteit → smaller */
+  th:nth-child(4), td:nth-child(4) { width: 45%; } /* Omschrijving → groter */
+  th:nth-child(5), td:nth-child(5) { width: 10%; } /* Uren */
+  th:nth-child(6), td:nth-child(6) { width: 10%; } /* Declarabel */
 
   body {
     font-size: 11px;
