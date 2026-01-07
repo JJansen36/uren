@@ -100,18 +100,51 @@ async function init(){
     return;
   }
 
-  const rows = data || [];
-  el("body").innerHTML = rows.map(r=>`
-    <tr>
-      <td>${formatNLDate(r.entry_date)}</td>
-      <td>${escapeHtml(r.clients?.name || "-")}</td>
-      <td>${escapeHtml(r.projects?.name || "-")}</td>
-      <td>${escapeHtml(r.activities?.name || "-")}</td>
-      <td>${escapeHtml(r.description || "")}</td>
-      <td><b>${formatHours(r.hours)}</b></td>
-      <td>${r.billable ? "Ja" : "Nee"}</td>
+const rows = data || [];
+
+// groeperen per dag
+const byDate = {};
+rows.forEach(r => {
+  if (!byDate[r.entry_date]) byDate[r.entry_date] = [];
+  byDate[r.entry_date].push(r);
+});
+
+let html = "";
+
+Object.keys(byDate).sort().forEach(date => {
+  const dayRows = byDate[date];
+  const dayTotal = sum(dayRows, r => Number(r.hours || 0));
+
+  // dagkop
+  html += `
+    <tr class="day-header">
+      <td colspan="7">
+        <b>${formatNLDate(date)}</b>
+        <span class="day-total">
+          Totaal gewerkt: ${formatHours(dayTotal)}
+        </span>
+      </td>
     </tr>
-  `).join("");
+  `;
+
+  // regels van die dag
+  dayRows.forEach(r => {
+    html += `
+      <tr>
+        <td></td>
+        <td>${escapeHtml(r.clients?.name || "-")}</td>
+        <td>${escapeHtml(r.projects?.name || "-")}</td>
+        <td>${escapeHtml(r.activities?.name || "-")}</td>
+        <td>${escapeHtml(r.description || "")}</td>
+        <td><b>${formatHours(r.hours)}</b></td>
+        <td>${r.billable ? "Ja" : "Nee"}</td>
+      </tr>
+    `;
+  });
+});
+
+el("body").innerHTML = html;
+
 
 const DAILY_NORM = Number(profile.daily_norm || 7.75);
 

@@ -241,3 +241,66 @@ button.small{
 .kpi.negative {
   box-shadow: 0 0 0 1px rgba(239,68,68,.3);
 }
+.day-header td {
+  padding: 8px 6px;
+  background: #f3f4f6;
+  border-top: 2px solid #111;
+  font-size: 11px;
+}
+
+.day-total {
+  float: right;
+  font-weight: normal;
+  font-size: 10.5px;
+  color: #374151;
+}
+
+
+
+
+@media print {
+
+  body {
+    font-size: 11px;
+  }
+
+  h1 {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .meta,
+  .header-info {
+    font-size: 11px;
+  }
+
+  table {
+    font-size: 10.5px;
+  }
+
+  th {
+    font-size: 10px;
+    padding: 6px 6px;
+  }
+
+  td {
+    padding: 6px 6px;
+    vertical-align: top;
+  }
+
+  .kpis {
+    margin-top: 12px;
+  }
+
+  .kpi-title {
+    font-size: 10px;
+  }
+
+  .kpi-value {
+    font-size: 15px;
+  }
+  .day-header td {
+      background: #e5e7eb;
+  }
+    
+}
