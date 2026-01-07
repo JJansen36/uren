@@ -256,13 +256,13 @@ button.small{
     table-layout: fixed;
   }
 
-  th:nth-child(1), td:nth-child(1) { width: 9%; }
-  th:nth-child(2), td:nth-child(2) { width: 13%; }
-  th:nth-child(3), td:nth-child(3) { width: 11%; }
-  th:nth-child(4), td:nth-child(4) { width: 14%; }
-  th:nth-child(5), td:nth-child(5) { width: 36%; }
-  th:nth-child(6), td:nth-child(6) { width: 5%; }
-  th:nth-child(7), td:nth-child(7) { width: 12%; }
+  th:nth-child(1), td:nth-child(1) { width: 5%; }  /* Datum */
+  th:nth-child(2), td:nth-child(2) { width: 14%; }  /* Klant */
+  th:nth-child(3), td:nth-child(3) { width: 12%; }  /* Project */
+  th:nth-child(4), td:nth-child(4) { width: 14%; }  /* Activiteit */
+  th:nth-child(5), td:nth-child(5) { width: 38%; }  /* Omschrijving */
+  th:nth-child(6), td:nth-child(6) { width: 5%; text-align:right; } /* Uren */
+  th:nth-child(7), td:nth-child(7) { width: 12%; }  /* Declarabel */
 
 
   body {
