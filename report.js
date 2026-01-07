@@ -171,7 +171,7 @@ Object.keys(workedByDate).sort().forEach(date => {
 
   html += `
     <tr class="day-header">
-      <td colspan="7">
+      <td colspan="6">
         <b>${formatNLDate(date)}</b>
         <span class="day-total">
           Totaal gewerkt: ${formatHours(worked.total)}
@@ -184,7 +184,7 @@ Object.keys(workedByDate).sort().forEach(date => {
   worked.blocks.forEach(b => {
     html += `
       <tr class="work-block">
-        <td colspan="7">
+        <td colspan="6">
           ⏱ ${b.start_time} – ${b.end_time}
           <span class="pause">(pauze ${b.break_minutes || 0} min)</span>
         </td>
@@ -196,22 +196,21 @@ Object.keys(workedByDate).sort().forEach(date => {
   if (dayRows.length === 0){
     html += `
       <tr class="no-spec">
-        <td colspan="7"><i>Geen gespecificeerde uren</i></td>
+        <td colspan="6"><i>Geen gespecificeerde uren</i></td>
       </tr>
     `;
   }
 
   dayRows.forEach(r => {
     html += `
-      <tr>
-        <td></td>
-        <td>${escapeHtml(r.clients?.name || "-")}</td>
-        <td>${escapeHtml(r.projects?.name || "-")}</td>
-        <td>${escapeHtml(r.activities?.name || "-")}</td>
-        <td>${escapeHtml(r.description || "")}</td>
-        <td><b>${formatHours(r.hours)}</b></td>
-        <td>${r.billable ? "Ja" : "Nee"}</td>
-      </tr>
+    <tr>
+      <td>${escapeHtml(r.clients?.name || "-")}</td>
+      <td>${escapeHtml(r.projects?.name || "-")}</td>
+      <td>${escapeHtml(r.activities?.name || "-")}</td>
+      <td>${escapeHtml(r.description || "")}</td>
+      <td><b>${formatHours(r.hours)}</b></td>
+      <td>${r.billable ? "Ja" : "Nee"}</td>
+    </tr>
     `;
   });
 });
