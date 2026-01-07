@@ -97,20 +97,17 @@ button.small{
 .help{color:var(--muted); font-size:13px; margin-top:8px}
 .hr{height:1px; background:var(--line); margin:14px 0}
 
- .table{
-  width:100%;
-  table-layout: fixed;      /* 🔑 verplicht */
-  border-collapse: collapse;/* 🔑 verplicht */
-  overflow:hidden;
-  border:1px solid var(--line);
-  border-radius:12px;
+.table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
 }
 
-.table th, .table td{
-  padding:10px 10px;
-  border-bottom:1px solid var(--line);
-  vertical-align:top;
+.table th,
+.table td {
+  padding: 6px;
 }
+
 .table th{
   text-align:left;
   color:var(--muted);
@@ -118,6 +115,12 @@ button.small{
   background:#101018;
 }
 .table tr:last-child td{border-bottom:none}
+
+.table td:nth-child(5) {
+  text-align: right;
+  white-space: nowrap;
+}
+
 
 .kpis{
   display:flex;
