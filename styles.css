@@ -234,9 +234,9 @@ button.small{
 }
 
 .week-day.active{
-  background: #5fe18b;
-  color: #04120a;
-  border-color: #5fe18b;
+  background: #979897;
+  color: #3e3f3e;
+  border-color: #979897;
 }
 #blocks{
   display: flex;
