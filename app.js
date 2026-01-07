@@ -273,6 +273,10 @@ async function saveWorkday(){
 
     await loadWorkdayForSelectedDate();
     await loadWeek();
+    await sb
+  .from("workdays")
+  .update({ total_hours: blocks.reduce((t,b)=>t+b.total_hours,0) })
+  .eq("id", wd.id);
 
     if (statusEl) statusEl.textContent = `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
   }catch(err){
@@ -377,25 +381,75 @@ async function loadWeek(){
     return;
   }
 
-  renderTable(data || []);
-  renderKPIs(data || []);
+renderTable(data || []);
+await renderWeekKPIs();
+
 
   if (hint) hint.textContent = (data && data.length) ? "" : "Nog geen uren voor deze dag.";
 }
 
-function renderKPIs(rows){
-  // Let op: KPI's zijn nu per dag (want rows = selectedDate)
-  const total = sum(rows,r=>Number(r.hours||0));
-  const bill = sum(rows.filter(r=>r.billable),r=>Number(r.hours||0));
+async function loadWeekWorkedHours(){
+  const end = addDays(weekStart, 6);
 
+  // alle workdays van deze week ophalen
+  const { data: workdays, error } = await sb
+    .from("workdays")
+    .select("id, work_date")
+    .eq("user_id", session.user.id)
+    .gte("work_date", toISODate(weekStart))
+    .lte("work_date", toISODate(end));
+
+  if (error || !workdays || workdays.length === 0){
+    return { total: 0, billable: 0 };
+  }
+
+  const workdayIds = workdays.map(w => w.id);
+
+  // alle blokken van deze week
+  const { data: blocks, error: bErr } = await sb
+    .from("workday_blocks")
+    .select("total_hours")
+    .in("workday_id", workdayIds);
+
+  if (bErr || !blocks){
+    return { total: 0, billable: 0 };
+  }
+
+  const totalWorked = blocks.reduce(
+    (t,b)=>t+Number(b.total_hours||0),
+    0
+  );
+
+  // billable komt nog steeds uit time_entries (logisch)
+  const { data: entries } = await sb
+    .from("time_entries")
+    .select("hours, billable")
+    .gte("entry_date", toISODate(weekStart))
+    .lte("entry_date", toISODate(end))
+    .eq("user_id", session.user.id);
+
+  const billable = (entries||[])
+    .filter(e=>e.billable)
+    .reduce((t,e)=>t+Number(e.hours||0),0);
+
+  return {
+    total: totalWorked,
+    billable
+  };
+}
+
+async function renderWeekKPIs(){
   const k1 = el("kpiTotal");
   const k2 = el("kpiBillable");
   const k3 = el("kpiNonBillable");
 
+  const { total, billable } = await loadWeekWorkedHours();
+
   if (k1) k1.textContent = formatHours(total);
-  if (k2) k2.textContent = formatHours(bill);
-  if (k3) k3.textContent = formatHours(total-bill);
+  if (k2) k2.textContent = formatHours(billable);
+  if (k3) k3.textContent = formatHours(total - billable);
 }
+
 
 function renderTable(rows){
   if (!tbody) return;
