@@ -235,3 +235,9 @@ button.small{
   height: 40px;
   padding: 0 12px;
 }
+.kpi.positive {
+  box-shadow: 0 0 0 1px rgba(34,197,94,.3);
+}
+.kpi.negative {
+  box-shadow: 0 0 0 1px rgba(239,68,68,.3);
+}

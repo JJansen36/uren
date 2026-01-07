@@ -432,9 +432,14 @@ async function loadWeekWorkedHours(){
     .filter(e=>e.billable)
     .reduce((t,e)=>t+Number(e.hours||0),0);
 
+  const workdaysCount = workdays.length;
+
+  const normTotal = workdaysCount * DAILY_NORM;
+
   return {
     total: totalWorked,
-    billable
+    billable,
+    saldo: totalWorked - normTotal
   };
 }
 
@@ -442,13 +447,27 @@ async function renderWeekKPIs(){
   const k1 = el("kpiTotal");
   const k2 = el("kpiBillable");
   const k3 = el("kpiNonBillable");
+  const kSaldo = el("kpiSaldo");
+  const kSaldoBox = el("kpiSaldoBox");
 
-  const { total, billable } = await loadWeekWorkedHours();
+  const { total, billable, saldo } = await loadWeekWorkedHours();
 
   if (k1) k1.textContent = formatHours(total);
   if (k2) k2.textContent = formatHours(billable);
   if (k3) k3.textContent = formatHours(total - billable);
+
+  if (kSaldo){
+    const sign = saldo > 0 ? "+" : "";
+    kSaldo.textContent = sign + formatHours(saldo);
+  }
+
+  if (kSaldoBox){
+    kSaldoBox.classList.remove("positive","negative");
+    if (saldo > 0.01) kSaldoBox.classList.add("positive");
+    else if (saldo < -0.01) kSaldoBox.classList.add("negative");
+  }
 }
+
 
 
 function renderTable(rows){
