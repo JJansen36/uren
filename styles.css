@@ -288,8 +288,8 @@ td:nth-child(4) {
   th:nth-child(2), td:nth-child(2) { width: 9%; }  /* Project */
   th:nth-child(3), td:nth-child(3) { width: 12%; } /* Activiteit → smaller */
   th:nth-child(4), td:nth-child(4) { width: 60%; } /* Omschrijving → groter */
-  th:nth-child(5), td:nth-child(5) { width: 5%; } /* Uren */
-  th:nth-child(6), td:nth-child(6) { width: 5%; } /* Declarabel */
+  th:nth-child(5), td:nth-child(5) { width: 5%; text-align:right; } /* Uren */
+  th:nth-child(6), td:nth-child(6) { width: 5%; text-align:right; } /* Declarabel */
 
   body {
     font-size: 11px;
