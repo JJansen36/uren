@@ -124,19 +124,30 @@ button.small{
 
 .kpis{
   display:flex;
-  gap:12px;
+  gap:8px;          /* 🔽 compacter */
   flex-wrap:wrap;
 }
+
 .kpi{
   flex:1;
-  min-width:200px;
+  min-width:180px;
   background:#101018;
   border:1px solid var(--line);
-  padding:12px;
-  border-radius:12px;
+  padding:8px 10px;   /* 🔽 minder hoogte */
+  border-radius:10px; /* iets compacter */
 }
-.kpi .label{color:var(--muted); font-size:12px}
-.kpi .value{font-size:20px; font-weight:800; margin-top:4px}
+
+.kpi .label{
+  font-size:11px;
+  line-height:1.2;
+}
+
+.kpi .value{
+  font-size:17px;
+  font-weight:700;
+  line-height:1.1;
+  margin-top:2px;
+}
 
 .weeknav{
   display:flex;
