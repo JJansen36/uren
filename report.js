@@ -73,7 +73,6 @@ async function loadWorkedBlocksByDate(sb, userId, weekStart){
 
   if (!workdays || workdays.length === 0) return {};
 
-  // 🔑 map: workday_id → work_date
   const idToDate = {};
   workdays.forEach(w => {
     idToDate[w.id] = w.work_date;
@@ -85,14 +84,14 @@ async function loadWorkedBlocksByDate(sb, userId, weekStart){
     .in("workday_id", Object.keys(idToDate))
     .order("start_time");
 
-  const map = {};
+  // ✅ HIER is blocks geldig
+  console.log("BLOCKS from supabase:", blocks);
 
-  // init per dag
+  const map = {};
   Object.values(idToDate).forEach(date => {
     map[date] = { total: 0, blocks: [] };
   });
 
-  // 🔒 alle blokken correct toevoegen
   (blocks || []).forEach(b => {
     const date = idToDate[b.workday_id];
     if (!date) return;
@@ -100,6 +99,9 @@ async function loadWorkedBlocksByDate(sb, userId, weekStart){
     map[date].blocks.push(b);
     map[date].total += Number(b.total_hours || 0);
   });
+
+  // ✅ en hier ook
+  console.log("MAP PER DATE:", map);
 
   return map;
 }
