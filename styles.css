@@ -219,12 +219,12 @@ button.small{
 .week-day{
   padding: 10px 6px;
   border-radius: 10px;
-  background: #12131a;
+  background: #373737;
   border: 1px solid #2a2d3a;
   cursor: pointer;
   text-align: center;
   font-weight: 600;
-  color: #cfd2ff;
+  color: #000000;
 }
 
 .week-day small{
@@ -234,9 +234,9 @@ button.small{
 }
 
 .week-day.active{
-  background: #979897;
-  color: #3e3f3e;
-  border-color: #979897;
+  background: #5fe18b;
+  color: #04120a;
+  border-color: #5fe18b;
 }
 #blocks{
   display: flex;
