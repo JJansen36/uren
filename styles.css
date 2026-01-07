@@ -300,17 +300,17 @@ button.small{
 .table td:nth-child(3) { width:12%; }  /* Activiteit */
 
 .table th:nth-child(4),
-.table td:nth-child(4) { width:45%; }  /* Omschrijving */
+.table td:nth-child(4) { width:65%; }  /* Omschrijving */
 
 .table th:nth-child(5),
 .table td:nth-child(5) {
-  width:10%;
+  width:5%;
   text-align:right;
   white-space:nowrap;
 } /* Uren */
 
 .table th:nth-child(6),
-.table td:nth-child(6) { width:10%; }  /* Declarabel */
+.table td:nth-child(6) { width:5%; }  /* Declarabel */
 
   body {
     font-size: 11px;
