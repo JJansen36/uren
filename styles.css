@@ -278,18 +278,33 @@ td:nth-child(4) {
     white-space: nowrap;
   }
 
-  table {
+  .table {
     table-layout: fixed;
     width: 100%;
+    border-collapse: collapse;
   }
 
-  /* Kolombreedtes (PDF) */
-  th:nth-child(1), td:nth-child(1) { width: 9%; } /* Klant */
-  th:nth-child(2), td:nth-child(2) { width: 9%; }  /* Project */
-  th:nth-child(3), td:nth-child(3) { width: 12%; } /* Activiteit → smaller */
-  th:nth-child(4), td:nth-child(4) { width: 60%; } /* Omschrijving → groter */
-  th:nth-child(5), td:nth-child(5) { width: 5%; text-align:right; } /* Uren */
-  th:nth-child(6), td:nth-child(6) { width: 5%; text-align:right; } /* Declarabel */
+.table th:nth-child(1),
+.table td:nth-child(1) { width:14%; }  /* Klant */
+
+.table th:nth-child(2),
+.table td:nth-child(2) { width:9%; }   /* Project */
+
+.table th:nth-child(3),
+.table td:nth-child(3) { width:12%; }  /* Activiteit */
+
+.table th:nth-child(4),
+.table td:nth-child(4) { width:45%; }  /* Omschrijving */
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width:10%;
+  text-align:right;
+  white-space:nowrap;
+} /* Uren */
+
+.table th:nth-child(6),
+.table td:nth-child(6) { width:10%; }  /* Declarabel */
 
   body {
     font-size: 11px;
