@@ -164,9 +164,10 @@ rows.forEach(r => {
 
 let html = "";
 
-Object.keys(byDate).sort().forEach(date => {
-  const dayRows = byDate[date];
-  const worked = workedByDate?.[date] || { total: 0, blocks: [] };
+// alle datums uit werkblokken nemen als basis
+Object.keys(workedByDate).sort().forEach(date => {
+  const worked = workedByDate[date] || { total: 0, blocks: [] };
+  const dayRows = byDate[date] || [];
 
   html += `
     <tr class="day-header">
@@ -179,6 +180,7 @@ Object.keys(byDate).sort().forEach(date => {
     </tr>
   `;
 
+  // ⏱ alle werkblokken
   worked.blocks.forEach(b => {
     html += `
       <tr class="work-block">
@@ -189,6 +191,15 @@ Object.keys(byDate).sort().forEach(date => {
       </tr>
     `;
   });
+
+  // specificaties (kan leeg zijn)
+  if (dayRows.length === 0){
+    html += `
+      <tr class="no-spec">
+        <td colspan="7"><i>Geen gespecificeerde uren</i></td>
+      </tr>
+    `;
+  }
 
   dayRows.forEach(r => {
     html += `
@@ -204,6 +215,7 @@ Object.keys(byDate).sort().forEach(date => {
     `;
   });
 });
+
 
 
 el("body").innerHTML = html;
