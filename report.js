@@ -142,6 +142,11 @@ async function init(){
 
 const rows = data || [];
 
+// ⏱ gewerkte tijdblokken per dag ophalen
+const workedByDate =
+  await loadWorkedBlocksByDate(sb, session.user.id, ws);
+
+
 // groeperen per dag
 const byDate = {};
 rows.forEach(r => {
