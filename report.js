@@ -155,39 +155,30 @@ let html = "";
 
 Object.keys(byDate).sort().forEach(date => {
   const dayRows = byDate[date];
-  const worked = workedByDate[date];
-
-  const workedTotal = worked ? worked.total : 0;
+  const worked = workedByDate?.[date] || { total: 0, blocks: [] };
 
   html += `
     <tr class="day-header">
       <td colspan="7">
         <b>${formatNLDate(date)}</b>
         <span class="day-total">
-          Totaal gewerkt: ${formatHours(workedTotal)}
+          Totaal gewerkt: ${formatHours(worked.total)}
         </span>
       </td>
     </tr>
   `;
 
-  // ⏱ werkblokken
-  if (worked && worked.blocks.length){
-    worked.blocks.forEach(b => {
-      html += `
-        <tr class="work-block">
-          <td colspan="7">
-            ⏱ ${b.start_time} – ${b.end_time}
-            <span class="pause">
-              (pauze ${b.break_minutes || 0} min)
-            </span>
-          </td>
-        </tr>
-      `;
-    });
-  }
+  worked.blocks.forEach(b => {
+    html += `
+      <tr class="work-block">
+        <td colspan="7">
+          ⏱ ${b.start_time} – ${b.end_time}
+          <span class="pause">(pauze ${b.break_minutes || 0} min)</span>
+        </td>
+      </tr>
+    `;
+  });
 
-
-  // regels van die dag
   dayRows.forEach(r => {
     html += `
       <tr>
@@ -202,6 +193,7 @@ Object.keys(byDate).sort().forEach(date => {
     `;
   });
 });
+
 
 el("body").innerHTML = html;
 
