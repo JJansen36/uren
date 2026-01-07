@@ -73,33 +73,37 @@ async function loadWorkedBlocksByDate(sb, userId, weekStart){
 
   if (!workdays || workdays.length === 0) return {};
 
-  const workdayIds = workdays.map(w => w.id);
+  // 🔑 map: workday_id → work_date
+  const idToDate = {};
+  workdays.forEach(w => {
+    idToDate[w.id] = w.work_date;
+  });
 
   const { data: blocks } = await sb
     .from("workday_blocks")
     .select("workday_id,start_time,end_time,break_minutes,total_hours")
-    .in("workday_id", workdayIds)
+    .in("workday_id", Object.keys(idToDate))
     .order("start_time");
 
   const map = {};
 
-  workdays.forEach(w => {
-    map[w.work_date] = {
-      total: 0,
-      blocks: []
-    };
+  // init per dag
+  Object.values(idToDate).forEach(date => {
+    map[date] = { total: 0, blocks: [] };
   });
 
+  // 🔒 alle blokken correct toevoegen
   (blocks || []).forEach(b => {
-    const wd = workdays.find(w => w.id === b.workday_id);
-    if (!wd) return;
+    const date = idToDate[b.workday_id];
+    if (!date) return;
 
-    map[wd.work_date].blocks.push(b);
-    map[wd.work_date].total += Number(b.total_hours || 0);
+    map[date].blocks.push(b);
+    map[date].total += Number(b.total_hours || 0);
   });
 
   return map;
 }
+
 
 
 async function init(){
