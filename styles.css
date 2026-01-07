@@ -175,14 +175,9 @@ button.small{
   font-size:12px;
 }
 
-/* PRINT / PDF (report.html) */
-@media print{
-  body{background:#fff; color:#000}
-  .no-print{display:none !important}
-  .card{border:none}
-  .table{border:1px solid #ddd}
-  .table th{background:#f3f3f3; color:#333}
-}
+
+
+
 .week-days{
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -248,28 +243,19 @@ button.small{
   font-size: 11px;
 }
 
-.day-total {
-  float: right;
-  font-weight: normal;
-  font-size: 10.5px;
-  color: #374151;
-}
-.work-block td {
-  font-size: 10px;
-  color: #374151;
-  padding: 4px 6px 6px 18px;
-  background: #fafafa;
-}
-
-.work-block .pause {
-  color: #6b7280;
-  font-style: italic;
-}
-
-
-
-
+/* PRINT / PDF (report.html) */
 @media print {
+  body{background:#fff; color:#000}
+  .no-print{display:none !important}
+  .card{border:none}
+  .table{border:1px solid #ddd}
+  .table th{background:#f3f3f3; color:#333}
+}
+
+
+
+
+@media print{
 
   body {
     font-size: 11px;
