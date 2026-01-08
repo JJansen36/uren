@@ -66,11 +66,21 @@ a{color:inherit}
    CARDS & LAYOUT
 ========================= */
 .card{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-x: auto;      /* 🔑 BELANGRIJK */
 }
+
+.card::-webkit-scrollbar{
+  height: 8px;
+}
+.card::-webkit-scrollbar-thumb{
+  background: var(--line);
+  border-radius: 4px;
+}
+
 
 .row{display:flex; gap:12px; flex-wrap:wrap}
 .col{flex:1; min-width:260px}
@@ -164,6 +174,7 @@ button.small{
 ========================= */
 .table{
   width:100%;
+  max-width: 100%;       /* 🔑 extra beveiliging */
   border-collapse:collapse;
   table-layout:fixed;
   border:1px solid var(--line);
