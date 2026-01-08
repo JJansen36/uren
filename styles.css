@@ -10,7 +10,6 @@
   --bad:#ef4444;
 
   --table-head:#f3f4f6;
-  --table-alt:#fafafa;
 }
 
 /* =========================
@@ -34,7 +33,7 @@ a{color:inherit}
 }
 
 /* =========================
-   HEADER / TOPBAR
+   HEADER
 ========================= */
 .topbar{
   display:flex;
@@ -122,12 +121,6 @@ button.small{
   font-size:13px;
 }
 
-.help{
-  color:var(--muted);
-  font-size:13px;
-  margin-top:8px;
-}
-
 /* =========================
    KPI BLOCKS
 ========================= */
@@ -164,11 +157,10 @@ button.small{
 .kpi .value{
   font-size:17px;
   font-weight:700;
-  margin-top:2px;
 }
 
 /* =========================
-   TABLE
+   TABLE (FIXED & CORRECT)
 ========================= */
 .table{
   width:100%;
@@ -199,28 +191,57 @@ button.small{
   border-bottom:none;
 }
 
-/* Kolombreedtes */
+/* === KOLOMMEN (JUISTE VOLGORDE) === */
+
+/* Datum */
 .table th:nth-child(1),
-.table td:nth-child(1){width:14%} /* Klant */
+.table td:nth-child(1){width:12%}
 
+/* Klant */
 .table th:nth-child(2),
-.table td:nth-child(2){width:10%} /* Project */
+.table td:nth-child(2){width:10%}
 
+/* Project */
 .table th:nth-child(3),
-.table td:nth-child(3){width:12%} /* Activiteit */
+.table td:nth-child(3){width:8%}
 
+/* Activiteit */
 .table th:nth-child(4),
-.table td:nth-child(4){width:44%} /* Omschrijving */
+.table td:nth-child(4){width:14%}
 
+/* Omschrijving */
 .table th:nth-child(5),
 .table td:nth-child(5){
-  width:10%;
+  width:36%;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  line-height:1.35;
+}
+
+/* Uren */
+.table th:nth-child(6),
+.table td:nth-child(6){
+  width:6%;
   text-align:right;
   white-space:nowrap;
-} /* Uren */
+  font-weight:600;
+}
 
-.table th:nth-child(6),
-.table td:nth-child(6){width:10%} /* Declarabel */
+/* Declarabel */
+.table th:nth-child(7),
+.table td:nth-child(7){
+  width:8%;
+  text-align:center;
+  white-space:nowrap;
+}
+
+/* Acties */
+.table th:nth-child(8),
+.table td:nth-child(8){
+  width:6%;
+  text-align:right;
+}
 
 /* Special rows */
 .day-header td{
@@ -236,35 +257,12 @@ button.small{
   color:var(--muted);
 }
 
-/* Omschrijving */
-td.description{
-  white-space:normal;
-  word-break:break-word;
-  overflow-wrap:anywhere;
-}
-
 /* Dag-afkorting verbergen */
 .date-day{display:none}
 
 /* =========================
    WEEK SELECTIE
 ========================= */
-.weeknav{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:space-between;
-}
-
-.weeknav .left,
-.weeknav .right{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-
 .week-days{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -295,75 +293,15 @@ td.description{
 }
 
 /* =========================
-   WORK BLOCKS
-========================= */
-#blocks{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.blockRow{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr auto;
-  gap:10px;
-  align-items:end;
-}
-
-.blockRow label{
-  font-size:12px;
-  opacity:.8;
-  margin-bottom:6px;
-  display:block;
-}
-
-.blockRow .remove{
-  height:40px;
-  padding:0 12px;
-}
-
-/* =========================
-   MODAL
-========================= */
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.55);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:16px;
-  z-index:50;
-}
-
-.modal.open{display:flex}
-
-.modal .box{
-  width:min(760px,100%);
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
-}
-
-.modal .box h2{
-  margin:0 0 10px;
-  font-size:16px;
-}
-
-.modal .actions{
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
-
-/* =========================
    PRINT / PDF
 ========================= */
 @media print{
-  body{background:#fff;color:#000;font-size:11px}
+  body{
+    background:#fff;
+    color:#000;
+    font-size:11px;
+  }
+
   .no-print{display:none!important}
   .card{border:none}
 
@@ -378,5 +316,7 @@ td.description{
     font-size:10px;
   }
 
-  .day-header td{background:#e5e7eb}
+  .day-header td{
+    background:#e5e7eb;
+  }
 }
