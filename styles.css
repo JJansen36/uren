@@ -1,82 +1,242 @@
+:root{
+  --bg:#f6f7fb;
+  --panel:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+
+  --acc:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --table-head:#f3f4f6;
+}
+
 /* =========================
-   TABLE (FINAL – CLEAN)
+   BASE
 ========================= */
-.table{
-  width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+a{color:inherit}
+
+.container{
+  max-width:1100px;
+  margin:0 auto;
+  padding:18px;
+}
+
+/* =========================
+   HEADER
+========================= */
+.topbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+
+.brand{
+  display:flex;
+  gap:10px;
+  align-items:baseline;
+}
+
+.brand h1{
+  font-size:18px;
+  margin:0;
+}
+
+.badge{
+  font-size:12px;
+  color:var(--muted);
+  border:1px solid var(--line);
+  padding:4px 8px;
+  border-radius:999px;
+}
+
+/* =========================
+   CARDS & LAYOUT
+========================= */
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:14px;
+}
+
+.row{display:flex; gap:12px; flex-wrap:wrap}
+.col{flex:1; min-width:260px}
+
+.hr{
+  height:1px;
+  background:var(--line);
+  margin:14px 0;
+}
+
+/* =========================
+   FORM ELEMENTS
+========================= */
+input,select,textarea,button{
+  background:#fff;
+  color:var(--text);
   border:1px solid var(--line);
   border-radius:10px;
-  overflow:hidden;
+}
+
+textarea{
+  min-height:84px;
+  resize:vertical;
+}
+
+button{
+  cursor:pointer;
+  background:#fff;
+}
+
+button.primary{
+  background:var(--acc);
+  color:#064e3b;
+  border:none;
+  font-weight:700;
+}
+
+button.danger{
+  background:var(--bad);
+  color:#7f1d1d;
+  border:none;
+}
+
+button.ghost{background:transparent}
+
+button.small{
+  padding:7px 10px;
   font-size:13px;
 }
 
-.table th,
-.table td{
-  padding:8px 10px;
-  border-bottom:1px solid var(--line);
-  vertical-align:top;
+/* =========================
+   KPI BLOCKS
+========================= */
+.kpis{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
 
-.table th{
-  background:#f3f4f6;
+.kpi{
+  flex:1;
+  min-width:180px;
+  background:#f9fafb;
+  border:1px solid var(--line);
+  padding:8px 10px;
+  border-radius:10px;
+}
+
+.kpi.positive{
+  background:#f0fdf4;
+  border-color:#bbf7d0;
+}
+
+.kpi.negative{
+  background:#fef2f2;
+  border-color:#fecaca;
+}
+
+.kpi .label{
   font-size:11px;
   color:var(--muted);
-  font-weight:600;
-  text-align:left;
 }
 
-.table tr:last-child td{
-  border-bottom:none;
+.kpi .value{
+  font-size:17px;
+  font-weight:700;
 }
 
-/* =========================
-   COLUMN WIDTHS (COLGROUP)
-========================= */
-.col-date      { width: 12%; }
-.col-client    { width: 10%; }
-.col-project   { width: 8%; }
-.col-activity  { width: 14%; }
-.col-desc      { width: auto; }   /* vult netjes de ruimte */
-.col-hours     { width: 80px; }
-.col-billable  { width: 90px; }
-.col-actions   { width: 110px; }
+<colgroup>
+  <col class="col-date">
+  <col class="col-client">
+  <col class="col-project">
+  <col class="col-activity">
+  <col class="col-desc">
+  <col class="col-hours">
+  <col class="col-billable">
+  <col class="col-actions">
+</colgroup>
 
-/* =========================
-   CELL BEHAVIOUR
-========================= */
-.table td:nth-child(6){
-  text-align:right;
-  font-weight:600;
-  white-space:nowrap;
-}
 
-.table td:nth-child(7){
-  text-align:center;
-  white-space:nowrap;
-}
-
-.table td:nth-child(8){
-  text-align:right;
-  white-space:nowrap;
-}
-
-.table td:nth-child(5){
-  white-space:normal;
-  word-break:break-word;
-  line-height:1.4;
-}
-
-/* Buttons */
-.table td:nth-child(8) button{
-  padding:6px 12px;
-  font-size:12px;
-}
-
-/* Day header */
-.day-header td{
-  background:#eef7f1;
+.work-block td{
+  background:#f9fafb;
   font-size:11px;
+  color:var(--muted);
+}
+
+/* Dag-afkorting verbergen */
+.date-day{display:none}
+
+/* =========================
+   WEEK SELECTIE
+========================= */
+.week-days{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:8px;
+}
+
+.week-day{
+  padding:10px 6px;
+  border-radius:10px;
+  background:#bdbdbd;
+  border:1px solid #2a2d3a;
+  cursor:pointer;
+  text-align:center;
   font-weight:600;
-  border-top:2px solid var(--line);
+  color:#000;
+}
+
+.week-day small{
+  display:block;
+  font-size:11px;
+  opacity:.7;
+}
+
+.week-day.active{
+  background:#5fe18b;
+  color:#04120a;
+  border-color:#5fe18b;
+}
+
+/* =========================
+   PRINT / PDF
+========================= */
+@media print{
+  body{
+    background:#fff;
+    color:#000;
+    font-size:11px;
+  }
+
+  .no-print{display:none!important}
+  .card{border:none}
+
+  .table{
+    font-size:10.5px;
+    border:1px solid #ddd;
+  }
+
+  .table th{
+    background:#f3f3f3;
+    color:#333;
+    font-size:10px;
+  }
+
+  .day-header td{
+    background:#e5e7eb;
+  }
 }
