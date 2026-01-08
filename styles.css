@@ -1,28 +1,27 @@
 /* =========================
-   TABLE (FINAL FIX)
+   TABLE (FINAL – CLEAN)
 ========================= */
 .table{
   width:100%;
-  table-layout:fixed;
   border-collapse:collapse;
+  table-layout:fixed;
   border:1px solid var(--line);
   border-radius:10px;
   overflow:hidden;
-  font-size:12.5px;
+  font-size:13px;
 }
 
 .table th,
 .table td{
-  padding:6px 8px;
+  padding:8px 10px;
   border-bottom:1px solid var(--line);
   vertical-align:top;
-  overflow:hidden;              /* 🔑 voorkomt overlap */
 }
 
 .table th{
-  background:var(--table-head);
-  color:var(--muted);
+  background:#f3f4f6;
   font-size:11px;
+  color:var(--muted);
   font-weight:600;
   text-align:left;
 }
@@ -31,62 +30,53 @@
   border-bottom:none;
 }
 
-/* === KOLOMMEN (JUISTE VOLGORDE) === */
+/* =========================
+   COLUMN WIDTHS (COLGROUP)
+========================= */
+.col-date      { width: 12%; }
+.col-client    { width: 10%; }
+.col-project   { width: 8%; }
+.col-activity  { width: 14%; }
+.col-desc      { width: auto; }   /* vult netjes de ruimte */
+.col-hours     { width: 80px; }
+.col-billable  { width: 90px; }
+.col-actions   { width: 110px; }
 
-/* Datum */
-.table th:nth-child(1),
-.table td:nth-child(1){width:11%}
-
-/* Klant */
-.table th:nth-child(2),
-.table td:nth-child(2){width:10%}
-
-/* Project */
-.table th:nth-child(3),
-.table td:nth-child(3){width:8%}
-
-/* Activiteit */
-.table th:nth-child(4),
-.table td:nth-child(4){width:14%}
-
-/* Omschrijving */
-.table th:nth-child(5),
-.table td:nth-child(5){
-  width:32%;                    /* 🔽 iets smaller */
-  white-space:normal;
-  word-break:break-word;
-  overflow-wrap:anywhere;
-  line-height:1.35;
-}
-
-/* Uren */
-.table th:nth-child(6),
+/* =========================
+   CELL BEHAVIOUR
+========================= */
 .table td:nth-child(6){
-  width:7%;
   text-align:right;
-  white-space:nowrap;
   font-weight:600;
+  white-space:nowrap;
 }
 
-/* Declarabel */
-.table th:nth-child(7),
 .table td:nth-child(7){
-  width:8%;
   text-align:center;
   white-space:nowrap;
 }
 
-/* Acties */
-.table th:nth-child(8),
 .table td:nth-child(8){
-  width:10%;                    /* 🔥 belangrijk */
   text-align:right;
   white-space:nowrap;
 }
 
-/* Knoppen in tabel */
+.table td:nth-child(5){
+  white-space:normal;
+  word-break:break-word;
+  line-height:1.4;
+}
+
+/* Buttons */
 .table td:nth-child(8) button{
-  max-width:100%;
-  padding:6px 10px;
+  padding:6px 12px;
   font-size:12px;
+}
+
+/* Day header */
+.day-header td{
+  background:#eef7f1;
+  font-size:11px;
+  font-weight:600;
+  border-top:2px solid var(--line);
 }
