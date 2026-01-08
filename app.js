@@ -717,15 +717,7 @@ function fillActivitiesDropdown(id){
   if (id) f.value = id;
 }
 
-async function loadKmForDay(datum) {
-  const { data } = await sb
-    .from("kilometers")
-    .select("*")
-    .eq("datum", datum)
-    .order("created_at");
 
-  renderKmRows(data || []);
-}
 async function saveKmForDay(datum) {
   await sb.from("kilometers").delete().eq("datum", datum);
 
