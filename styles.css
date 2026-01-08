@@ -320,3 +320,43 @@ button.small{
     background:#e5e7eb;
   }
 }
+
+
+/* =========================
+   MODAL
+========================= */
+.modal{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal.open{
+  display: flex;
+}
+
+.modal .box{
+  width: min(760px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.modal .box h2{
+  margin: 0 0 10px 0;
+  font-size: 16px;
+}
+
+.modal .actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
