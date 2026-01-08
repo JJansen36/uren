@@ -72,38 +72,48 @@
       <div class="hr"></div>
 
 <div class="card" id="dayCard">
-  <div class="row">
-  <div class="col">
-    <label class="help">Werkdag</label>
-    <div class="week-days" id="weekDays"></div>
+
+  <label class="help">Werkdag</label>
+
+  <!-- Werkdag layout -->
+  <div class="workday-layout">
+
+    <!-- LINKS -->
+    <div class="workday-left">
+
+      <!-- Dagselectie (SLECHTS 1x) -->
+      <div id="weekDays" class="week-days"></div>
+
+      <!-- Tijdblokken -->
+      <div id="blocks" class="workday-blocks"></div>
+
+      <button id="btnAddBlock" type="button" class="small">
+        + Tijdblok
+      </button>
+
+    </div>
+
+    <!-- RECHTS -->
+    <div class="workday-right">
+
+      <button id="btnSaveDay" type="button">
+        Dag opslaan
+      </button>
+
+      <div class="summary">
+        <label>Totaal uren</label>
+        <input id="dTotal" type="text" readonly />
+      </div>
+
+      <div id="dayStatus" class="muted"></div>
+
+    </div>
 
   </div>
+
 </div>
 
-<div class="hr"></div>
 
-
-<!-- Werkdag: tijdblokken -->
-<div class="workday-blocks">
-  <div class="row">
-    <div id="weekDays" class="week-days"></div>
-  </div>
-
-  <div id="blocks"></div>
-
-  <div class="row" style="margin-top:10px; display:flex; gap:10px;">
-    <button id="btnAddBlock" type="button" class="small">+ Tijdblok</button>
-    <div style="flex:1"></div>
-    <button id="btnSaveDay" type="button">Dag opslaan</button>
-  </div>
-
-  <div class="row" style="margin-top:10px;">
-    <label>Totaal uren</label>
-    <input id="dTotal" type="text" readonly />
-  </div>
-
-  <div id="dayStatus" class="muted" style="margin-top:8px;"></div>
-</div>
 
 
 <div class="hr"></div>
@@ -120,18 +130,18 @@
           <col class="col-billable">
           <col class="col-actions">
         </colgroup>
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th>Klant</th>
-            <th>Project</th>
-            <th>Activiteit</th>
-            <th>Omschrijving</th>
-            <th>Uren</th>
-            <th>Declarabel</th>
-            <th>Acties</th>
-          </tr>
-        </thead>
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Klant</th>
+          <th>Project</th>
+          <th>Activiteit</th>
+          <th>Omschrijving</th>
+          <th>Uren</th>
+          <th>Declarabel</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
         <tbody id="tbody"></tbody>
       </table>
 
