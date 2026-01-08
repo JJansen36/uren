@@ -247,3 +247,36 @@ if (saldoBox){
 
   el("status").textContent = rows.length ? "" : "Geen uren in deze week.";
 }
+
+
+async function loadKmWeek(start, end) {
+  const { data } = await sb
+    .from("kilometers")
+    .select("*")
+    .gte("datum", start)
+    .lte("datum", end)
+    .order("datum");
+
+  let total = 0;
+  const body = document.getElementById("kmWeekBody");
+  body.innerHTML = "";
+
+  data.forEach(r => {
+    total += Number(r.kilometers);
+
+    body.innerHTML += `
+      <tr>
+        <td>${r.datum}</td>
+        <td>${r.van}</td>
+        <td>${r.naar}</td>
+        <td>${r.kilometers}</td>
+        <td>${r.declarabel ? "Ja" : "Nee"}</td>
+      </tr>`;
+  });
+
+  document.getElementById("kmWeekTotal").innerText =
+    total.toFixed(1) + " km";
+}
+
+
+const vergoeding = kmTotaal * 0.23; // NL 2025

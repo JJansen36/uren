@@ -99,7 +99,30 @@
 
 </div>
 
+<!-- Kilometers -->
+<div class="panel">
+  <h3>🚗 Kilometerregistratie</h3>
 
+  <div id="kmRows"></div>
+
+  <button id="btnAddKm" class="small">+ Rit toevoegen</button>
+
+  <div class="row">
+    <label>Totaal km vandaag</label>
+    <input id="kmTotalDay" type="text" readonly />
+  </div>
+</div>
+
+<div class="km-row">
+  <input class="km-van" placeholder="Van" />
+  <input class="km-naar" placeholder="Naar" />
+  <input class="km-aantal" type="number" step="0.1" placeholder="Km" />
+  <label class="checkbox">
+    <input class="km-decl" type="checkbox" checked />
+    Declarabel
+  </label>
+  <button class="danger">✕</button>
+</div>
 
 
 <div class="hr"></div>

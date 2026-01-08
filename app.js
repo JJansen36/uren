@@ -705,8 +705,45 @@ function fillActivitiesDropdown(id){
   if (id) f.value = id;
 }
 
+async function loadKmForDay(datum) {
+  const { data } = await sb
+    .from("kilometers")
+    .select("*")
+    .eq("datum", datum)
+    .order("created_at");
+
+  renderKmRows(data || []);
+}
+async function saveKmForDay(datum) {
+  await sb.from("kilometers").delete().eq("datum", datum);
+
+  const rows = document.querySelectorAll(".km-row");
+
+  for (const row of rows) {
+    const van = row.querySelector(".km-van").value.trim();
+    const naar = row.querySelector(".km-naar").value.trim();
+    const km = parseFloat(row.querySelector(".km-aantal").value);
+    const decl = row.querySelector(".km-decl").checked;
+
+    if (!van || !naar || !km) continue;
+
+    await sb.from("kilometers").insert({
+      user_id: user.id,
+      datum,
+      van,
+      naar,
+      kilometers: km,
+      declarabel: decl
+    });
+  }
+}
+
+
+
 /* ======================
    MODAL VIS
 ====================== */
 function openModal(){ if (el("modal")) el("modal").classList.add("open"); }
 function closeModal(){ if (el("modal")) el("modal").classList.remove("open"); }
+
+
