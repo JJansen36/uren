@@ -72,9 +72,9 @@ async function init(){
 
 const btnSaveDay = el("btnSaveDay");
 if (btnSaveDay) {
+
   btnSaveDay.onclick = async () => {
     await saveWorkday();
-    await saveKmForDay(selectedDate);
   };
 }
 
@@ -719,6 +719,9 @@ function fillActivitiesDropdown(id){
 
 
 async function saveKmForDay(datum) {
+  const statusEl = el("kmStatus");
+  if (statusEl) statusEl.textContent = "Opslaan…";
+
   await sb.from("kilometers").delete().eq("datum", datum);
 
   const rows = document.querySelectorAll(".km-row");
@@ -740,8 +743,12 @@ async function saveKmForDay(datum) {
       declarabel: decl
     });
   }
-}
 
+  if (statusEl) {
+    statusEl.textContent = "Kilometers opgeslagen";
+    setTimeout(() => statusEl.textContent = "", 2500);
+  }
+}
 
 
 /* ======================
@@ -812,4 +819,12 @@ async function loadKmForDay(datum) {
   }
 
   renderKmRows(data || []);
+}
+
+
+const btnSaveKm = el("btnSaveKm");
+if (btnSaveKm) {
+  btnSaveKm.onclick = async () => {
+    await saveKmForDay(selectedDate);
+  };
 }
