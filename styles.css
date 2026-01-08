@@ -11,6 +11,15 @@
 
   --table-head:#f3f4f6;
 }
+/* Tabel kolombreedtes */
+.col-date      { width: 120px; }
+.col-client    { width: 120px; }
+.col-project   { width: 90px; }
+.col-activity  { width: 140px; }
+.col-desc      { width: auto; }   /* vult resterende ruimte */
+.col-hours     { width: 70px; }
+.col-billable  { width: 90px; }
+.col-actions   { width: 110px; }
 
 /* =========================
    BASE
