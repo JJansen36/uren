@@ -320,6 +320,13 @@ button.small{
   display: none;
 }
 
+td.description {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 320px;   /* pas aan naar wens */
+}
+
 /* PRINT / PDF (report.html) */
 @media print {
   body{background:#fff; color:#000}
