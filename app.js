@@ -84,6 +84,8 @@ if (btnSaveDay) {
   renderWeekDays();
   await loadWeek();
   await loadWorkdayForSelectedDate();
+  await loadKmForDay(selectedDate);
+
 }
 
 /* ======================
@@ -338,7 +340,9 @@ async function refreshWeek(){
   renderWeekDays();
   await loadWeek();
   await loadWorkdayForSelectedDate();
+  await loadKmForDay(selectedDate);   // ✅ KM reset + laden
 }
+
 
 function renderWeekDays(){
   const cont = el("weekDays");
@@ -356,12 +360,14 @@ function renderWeekDays(){
     btn.className = "week-day" + (iso===selectedDate ? " active" : "");
     btn.innerHTML = `${labels[i]}<small>${String(d.getDate()).padStart(2,"0")}</small>`;
 
-    btn.onclick = async ()=>{
-      selectedDate = iso;
-      renderWeekDays();
-      await loadWorkdayForSelectedDate();
-      await loadWeek(); // tabel = alleen selectedDate
-    };
+btn.onclick = async ()=>{
+  selectedDate = iso;
+  renderWeekDays();
+  await loadWorkdayForSelectedDate();
+  await loadKmForDay(selectedDate);   // ✅ KM per dag
+  await loadWeek();
+};
+
 
     cont.appendChild(btn);
   }
@@ -728,13 +734,13 @@ async function saveKmForDay(datum) {
   for (const row of rows) {
     const van = row.querySelector(".km-van").value.trim();
     const naar = row.querySelector(".km-naar").value.trim();
-    const km = parseFloat(row.querySelector(".km-aantal").value);
+    const km = parseFloat(row.querySelector(".km-km").value);
     const decl = row.querySelector(".km-decl").checked;
 
     if (!van || !naar || !km) continue;
 
     await sb.from("kilometers").insert({
-      user_id: user.id,
+      user_id: session.user.id,
       datum,
       van,
       naar,
@@ -775,3 +781,43 @@ function updateKmTotal() {
 document.addEventListener("input", e => {
   if (e.target.classList.contains("km-km")) updateKmTotal();
 });
+function clearKmRows() {
+  document.getElementById("kmRows").innerHTML = "";
+  document.getElementById("kmTotalDay").value = "0.0 km";
+}
+function renderKmRows(rows) {
+  clearKmRows();
+
+  rows.forEach(r => {
+    const tpl = document.getElementById("kmRowTpl");
+    const row = tpl.content.cloneNode(true);
+
+    row.querySelector(".km-van").value = r.van;
+    row.querySelector(".km-naar").value = r.naar;
+    row.querySelector(".km-km").value = r.kilometers;
+    row.querySelector(".km-decl").checked = r.declarabel;
+
+    row.querySelector(".km-del").onclick = e =>
+      e.target.closest(".km-row").remove();
+
+    document.getElementById("kmRows").appendChild(row);
+  });
+
+  updateKmTotal();
+}
+async function loadKmForDay(datum) {
+  clearKmRows();
+
+  const { data, error } = await sb
+    .from("kilometers")
+    .select("*")
+    .eq("datum", datum)
+    .order("created_at");
+
+  if (error) {
+    console.error("KM load error", error);
+    return;
+  }
+
+  renderKmRows(data || []);
+}
