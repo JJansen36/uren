@@ -131,11 +131,7 @@
         <tbody id="tbody"></tbody>
       </table>
 
-      <p class="help" id="hint"></p>
-    </div>
-  </div>
-
-<!-- Kilometers -->
+      <!-- Kilometers -->
 <div class="panel">
   <h3>🚗 Kilometerregistratie</h3>
 
@@ -149,16 +145,23 @@
   </div>
 </div>
 
-<div class="km-row">
-  <input class="km-van" placeholder="Van" />
-  <input class="km-naar" placeholder="Naar" />
-  <input class="km-aantal" type="number" step="0.1" placeholder="Km" />
-  <label class="checkbox">
-    <input class="km-decl" type="checkbox" checked />
-    Declarabel
-  </label>
-  <button class="danger">✕</button>
-</div>
+<template id="kmRowTpl">
+  <div class="row km-row">
+    <input class="km-van" placeholder="Van" />
+    <input class="km-naar" placeholder="Naar" />
+    <input class="km-km" type="number" step="0.1" placeholder="Km" />
+    <label class="checkbox">
+      <input class="km-decl" type="checkbox" checked />
+      Declarabel
+    </label>
+    <button type="button" class="icon danger km-del">✕</button>
+  </div>
+</template>
+
+
+      <p class="help" id="hint"></p>
+    </div>
+  </div>
 
   <!-- MODAL -->
   <div class="modal" id="modal">

@@ -70,8 +70,14 @@ async function init(){
     };
   }
 
-  const btnSaveDay = el("btnSaveDay");
-  if (btnSaveDay) btnSaveDay.onclick = saveWorkday;
+const btnSaveDay = el("btnSaveDay");
+if (btnSaveDay) {
+  btnSaveDay.onclick = async () => {
+    await saveWorkday();
+    await saveKmForDay(selectedDate);
+  };
+}
+
 
   await loadReferenceData();
 
@@ -747,3 +753,25 @@ function openModal(){ if (el("modal")) el("modal").classList.add("open"); }
 function closeModal(){ if (el("modal")) el("modal").classList.remove("open"); }
 
 
+document.getElementById("btnAddKm").onclick = () => {
+  const tpl = document.getElementById("kmRowTpl");
+  const row = tpl.content.cloneNode(true);
+
+  row.querySelector(".km-del").onclick = e =>
+    e.target.closest(".km-row").remove();
+
+  document.getElementById("kmRows").appendChild(row);
+};
+
+function updateKmTotal() {
+  let total = 0;
+  document.querySelectorAll(".km-km").forEach(i => {
+    total += parseFloat(i.value) || 0;
+  });
+  document.getElementById("kmTotalDay").value =
+    total.toFixed(1) + " km";
+}
+
+document.addEventListener("input", e => {
+  if (e.target.classList.contains("km-km")) updateKmTotal();
+});
