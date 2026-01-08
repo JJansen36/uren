@@ -376,17 +376,6 @@ button.small{
    TIJDBLOKKEN (WERKDAG)
 ========================= */
 
-.workday-blocks{
-  max-width: 520px;          /* 🔑 voorkomt te brede layout */
-}
-
-.blockRow{
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #fff;
-}
 
 .time-grid{
   display: grid;
@@ -402,24 +391,40 @@ button.small{
   align-items: center;
 }
 
+.workday-blocks .blockRow{
+  display: grid;
+  grid-template-columns: 1fr 1fr 140px 40px;
+  gap: 16px;
+  align-items: end;
+
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+.blockRow .field{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .blockRow label{
   font-size: 12px;
   color: var(--muted);
-  display: block;
-  margin-bottom: 4px;
 }
 
 .blockRow input{
-  width: 100%;
+  height: 38px;
 }
 
 .blockRow .remove{
-  height: 36px;
-  width: 36px;
+  height: 38px;
+  width: 38px;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  background: #fff;
-  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .blockRow .remove:hover{

@@ -95,21 +95,32 @@ function createBlockRow(block = { id:null, start_time:"", end_time:"", break_min
   row.className = "blockRow";
   row.dataset.id = block.id || "";
 
-  row.innerHTML = `
-    <div>
-      <label>Aanvang</label>
-      <input type="time" class="bStart" value="${block.start_time || ""}">
-    </div>
-    <div>
-      <label>Gereed</label>
-      <input type="time" class="bEnd" value="${block.end_time || ""}">
-    </div>
-    <div>
-      <label>Pauze (min)</label>
-      <input type="number" min="0" step="5" class="bPause" value="${Number(block.break_minutes || 0)}">
-    </div>
-    <button type="button" class="remove">✕</button>
-  `;
+row.innerHTML = `
+  <div class="field">
+    <label>Aanvang</label>
+    <input type="time" class="bStart" value="${block.start_time || ""}">
+  </div>
+
+  <div class="field">
+    <label>Gereed</label>
+    <input type="time" class="bEnd" value="${block.end_time || ""}">
+  </div>
+
+  <div class="field pause">
+    <label>Pauze (min)</label>
+    <input
+      type="number"
+      min="0"
+      step="5"
+      class="bPause"
+      value="${Number(block.break_minutes || 0)}"
+    >
+  </div>
+
+  <button type="button" class="remove" title="Verwijder tijdblok">✕</button>
+`;
+
+
 
   row.querySelector(".remove").onclick = ()=>{
     row.remove();
