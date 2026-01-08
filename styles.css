@@ -159,17 +159,97 @@ button.small{
   font-weight:700;
 }
 
-<colgroup>
-  <col class="col-date">
-  <col class="col-client">
-  <col class="col-project">
-  <col class="col-activity">
-  <col class="col-desc">
-  <col class="col-hours">
-  <col class="col-billable">
-  <col class="col-actions">
-</colgroup>
+/* =========================
+   TABLE (FIXED & CORRECT)
+========================= */
+.table{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:collapse;
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+  font-size:12.5px;
+}
 
+.table th,
+.table td{
+  padding:6px 8px;
+  border-bottom:1px solid var(--line);
+  vertical-align:top;
+}
+
+.table th{
+  background:var(--table-head);
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+  text-align:left;
+}
+
+.table tr:last-child td{
+  border-bottom:none;
+}
+
+/* === KOLOMMEN (JUISTE VOLGORDE) === */
+
+/* Datum */
+.table th:nth-child(1),
+.table td:nth-child(1){width:12%}
+
+/* Klant */
+.table th:nth-child(2),
+.table td:nth-child(2){width:10%}
+
+/* Project */
+.table th:nth-child(3),
+.table td:nth-child(3){width:8%}
+
+/* Activiteit */
+.table th:nth-child(4),
+.table td:nth-child(4){width:14%}
+
+/* Omschrijving */
+.table th:nth-child(5),
+.table td:nth-child(5){
+  width:36%;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  line-height:1.35;
+}
+
+/* Uren */
+.table th:nth-child(6),
+.table td:nth-child(6){
+  width:6%;
+  text-align:right;
+  white-space:nowrap;
+  font-weight:600;
+}
+
+/* Declarabel */
+.table th:nth-child(7),
+.table td:nth-child(7){
+  width:8%;
+  text-align:center;
+  white-space:nowrap;
+}
+
+/* Acties */
+.table th:nth-child(8),
+.table td:nth-child(8){
+  width:6%;
+  text-align:right;
+}
+
+/* Special rows */
+.day-header td{
+  background:#eef7f1;
+  border-top:2px solid var(--line);
+  font-size:11px;
+  font-weight:600;
+}
 
 .work-block td{
   background:#f9fafb;
