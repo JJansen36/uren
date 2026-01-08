@@ -73,43 +73,28 @@
 
 <div class="card" id="dayCard">
 
-  <label class="help">Werkdag</label>
+  <!-- 1. WERKTIJD -->
+  <h3 class="section-title">Werktijd</h3>
 
-  <!-- Werkdag layout -->
-  <div class="workday-layout">
+  <div id="weekDays" class="week-days"></div>
 
-    <!-- LINKS -->
-    <div class="workday-left">
+  <div id="blocks" class="workday-blocks"></div>
 
-      <!-- Dagselectie (SLECHTS 1x) -->
-      <div id="weekDays" class="week-days"></div>
+  <button id="btnAddBlock" class="small">+ Tijdblok</button>
 
-      <!-- Tijdblokken -->
-      <div id="blocks" class="workday-blocks"></div>
-
-      <button id="btnAddBlock" type="button" class="small">
-        + Tijdblok
-      </button>
-
-    </div>
-
-    <!-- RECHTS -->
-    <div class="workday-right">
-
-      <button id="btnSaveDay" type="button">
-        Dag opslaan
-      </button>
-
-      <div class="summary">
-        <label>Totaal uren</label>
-        <input id="dTotal" type="text" readonly />
-      </div>
-
-      <div id="dayStatus" class="muted"></div>
-
-    </div>
-
+  <div class="total-row">
+    <label>Totaal gewerkte uren</label>
+    <input id="dTotal" type="text" readonly>
   </div>
+
+  <div class="hr"></div>
+
+  <!-- 2. DAGRESULTAAT -->
+  <h3 class="section-title">Dagresultaat</h3>
+
+  <div id="dayStatus" class="day-summary"></div>
+
+  <button id="btnSaveDay" class="primary">Dag opslaan</button>
 
 </div>
 
