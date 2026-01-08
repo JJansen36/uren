@@ -552,3 +552,10 @@ button.small{
   padding:10px;
   margin-bottom:12px;
 }
+.workday-actions{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  gap: 12px;
+}
