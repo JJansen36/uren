@@ -54,7 +54,7 @@ async function init(){
   weekStart = qs ? startOfISOWeek(parseISODate(qs)) : startOfISOWeek(new Date());
   setQueryParam("weekStart", toISODate(weekStart));
 
-  selectedDate = toISODate(new Date());
+ selectedDate = toISODate(weekStart);
 
   wireWeekNav();
   wireModal();
@@ -93,6 +93,12 @@ function getDailyNormForDate(dateStr) {
   const day = d.getDay(); // 0 = zo, 6 = za
   if (day === 0 || day === 6) return 0;
   return DAILY_NORM;
+}
+
+function isDateInWeek(dateStr) {
+  const d = new Date(dateStr);
+  const end = addDays(weekStart, 6);
+  return d >= weekStart && d <= end;
 }
 /* ======================
    TIME BLOCK HELPERS
@@ -254,7 +260,10 @@ const saldo = worked - dayNorm;
     if (statusEl){
       statusEl.innerHTML = `
         <b>Werkdag ${formatNLDate(selectedDate)}</b><br>
-        ${worked.toFixed(2)}u gewerkt · norm ${DAILY_NORM.toFixed(2)}u<br>
+        ${worked.toFixed(2)}u gewerkt · ${
+  dayNorm ? `norm ${dayNorm.toFixed(2)}u` : "weekend (geen norm)"
+}<br>
+
         ${specified.toFixed(2)}u gespecificeerd · <b>${sign}${saldo.toFixed(2)}u saldo</b>
       `;
     }
@@ -270,12 +279,10 @@ async function saveWorkday(){
   try{
     const wd = await ensureWorkday();
 
-    const blocks = getBlocksFromUI();
-    if (blocks.length === 0){
-      if (statusEl) statusEl.textContent = "Voeg minimaal 1 tijdblok toe (start + eind).";
-      return;
-    }
-
+    if (!isDateInWeek(selectedDate)) {
+  weekStart = startOfISOWeek(new Date(selectedDate));
+  setQueryParam("weekStart", toISODate(weekStart));
+}
     // simpeler & robuust: delete + insert
     const { error: delErr } = await sb
       .from("workday_blocks")
