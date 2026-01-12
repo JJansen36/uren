@@ -88,6 +88,12 @@ if (btnSaveDay) {
 
 }
 
+function getDailyNormForDate(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0 = zo, 6 = za
+  if (day === 0 || day === 6) return 0;
+  return DAILY_NORM;
+}
 /* ======================
    TIME BLOCK HELPERS
 ====================== */
@@ -240,7 +246,9 @@ async function loadWorkdayForSelectedDate(){
 
     const specified = (entries||[]).reduce((t,e)=>t+Number(e.hours||0),0);
     const worked = getBlocksFromUI().reduce((t,b)=>t+Number(b.total_hours||0),0);
-    const saldo = worked - DAILY_NORM;
+   const dayNorm = getDailyNormForDate(selectedDate);
+const saldo = worked - dayNorm;
+
     const sign = saldo > 0 ? "+" : "";
 
     if (statusEl){
@@ -455,9 +463,10 @@ async function loadWeekWorkedHours(){
     .filter(e=>e.billable)
     .reduce((t,e)=>t+Number(e.hours||0),0);
 
-  const workdaysCount = workdays.length;
-
-  const normTotal = workdaysCount * DAILY_NORM;
+const normTotal = workdays.reduce(
+  (t, w) => t + getDailyNormForDate(w.work_date),
+  0
+);
 
   return {
     total: totalWorked,
