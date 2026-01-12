@@ -181,8 +181,11 @@ function recalcBlocksTotal(){
   const totalEl = el("dTotal");
   if (!totalEl) return;
 
-  const blocks = getBlocksFromUI();
-  const total = blocks.reduce((t,b)=>t+Number(b.total_hours||0),0);
+const blockList = getBlocksFromUI();
+const total = blockList.reduce(
+  (t, b) => t + Number(b.total_hours || 0),
+  0
+);
   totalEl.value = total.toFixed(2).replace(".", ",");
 }
 
@@ -272,18 +275,22 @@ const saldo = worked - dayNorm;
   }
 }
 
-async function saveWorkday(){
+async function saveWorkday() {
   const statusEl = el("dayStatus");
   if (statusEl) statusEl.textContent = "";
 
-  try{
+  try {
+    // 1️⃣ Zorg dat workday bestaat
     const wd = await ensureWorkday();
 
-    if (!isDateInWeek(selectedDate)) {
-  weekStart = startOfISOWeek(new Date(selectedDate));
-  setQueryParam("weekStart", toISODate(weekStart));
-}
-    // simpeler & robuust: delete + insert
+    // 2️⃣ Haal tijdblokken uit UI
+    const blockList = getBlocksFromUI();
+
+    if (!Array.isArray(blockList) || blockList.length === 0) {
+      throw new Error("Voeg minimaal één geldig tijdblok toe.");
+    }
+
+    // 3️⃣ Oude blokken verwijderen
     const { error: delErr } = await sb
       .from("workday_blocks")
       .delete()
@@ -291,7 +298,8 @@ async function saveWorkday(){
 
     if (delErr) throw delErr;
 
-    const payload = blocks.map(b=>({
+    // 4️⃣ Nieuwe blokken opslaan
+    const payload = blockList.map(b => ({
       workday_id: wd.id,
       start_time: b.start_time,
       end_time: b.end_time,
@@ -305,18 +313,36 @@ async function saveWorkday(){
 
     if (insErr) throw insErr;
 
+    // 5️⃣ Totaal uren bijwerken op workday
+    const totalHours = blockList.reduce(
+      (t, b) => t + Number(b.total_hours || 0),
+      0
+    );
+
+    const { error: updErr } = await sb
+      .from("workdays")
+      .update({ total_hours: totalHours })
+      .eq("id", wd.id);
+
+    if (updErr) throw updErr;
+
+    // 6️⃣ UI verversen
     await loadWorkdayForSelectedDate();
     await loadWeek();
-    await sb
-  .from("workdays")
-  .update({ total_hours: blocks.reduce((t,b)=>t+b.total_hours,0) })
-  .eq("id", wd.id);
 
-    if (statusEl) statusEl.textContent = `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
-  }catch(err){
-    if (statusEl) statusEl.textContent = err?.message || String(err);
+    if (statusEl) {
+      statusEl.textContent =
+        `Werkdag opgeslagen (${formatNLDate(selectedDate)}).`;
+    }
+
+  } catch (err) {
+    if (statusEl) {
+      statusEl.textContent = err?.message || String(err);
+    }
+    console.error("saveWorkday error:", err);
   }
 }
+
 
 /* ======================
    WEEK NAV & DAY BUTTONS
@@ -474,10 +500,13 @@ const totalWorked = blocks.reduce(
     .filter(e=>e.billable)
     .reduce((t,e)=>t+Number(e.hours||0),0);
 
-const normTotal = workdays.reduce(
-  (t, w) => t + getDailyNormForDate(w.work_date),
-  0
-);
+const todayISO = toISODate(new Date());
+
+const normTotal = workdays.reduce((t, w) => {
+  if (w.work_date > todayISO) return t;
+  return t + getDailyNormForDate(w.work_date);
+}, 0);
+
 
   return {
     total: totalWorked,
