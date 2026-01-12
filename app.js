@@ -444,19 +444,23 @@ async function loadWeekWorkedHours(){
   const workdayIds = workdays.map(w => w.id);
 
   // alle blokken van deze week
-  const { data: blocks, error: bErr } = await sb
-    .from("workday_blocks")
-    .select("total_hours")
-    .in("workday_id", workdayIds);
+const { data: blocksRaw, error: bErr } = await sb
+  .from("workday_blocks")
+  .select("total_hours")
+  .in("workday_id", workdayIds);
 
-  if (bErr || !blocks){
-    return { total: 0, billable: 0 };
-  }
+if (bErr){
+  console.error(bErr);
+  return { total: 0, billable: 0 };
+}
 
-  const totalWorked = blocks.reduce(
-    (t,b)=>t+Number(b.total_hours||0),
-    0
-  );
+const blocks = Array.isArray(blocksRaw) ? blocksRaw : [];
+
+const totalWorked = blocks.reduce(
+  (t, b) => t + Number(b.total_hours || 0),
+  0
+);
+
 
   // billable komt nog steeds uit time_entries (logisch)
   const { data: entries } = await sb
